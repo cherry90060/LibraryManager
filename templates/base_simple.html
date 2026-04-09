@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}图书馆管理系统{% endblock %}</title>
+    
+    <!-- 样式文件 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            /* 主色调：低饱和藏蓝 */
+            --primary-color: #2c3e50;
+            /* 辅助色：墨绿 */
+            --secondary-color: #34495e;
+            /* 状态色 */
+            --success-color: #e8f5e8;
+            --warning-color: #fff3e0;
+            --danger-color: #f8d7da;
+            --info-color: #e3f2fd;
+            /* 中性色 */
+            --light-gray: #f8f9fa;
+            --medium-gray: #e9ecef;
+            --dark-gray: #adb5bd;
+            --darker-gray: #6c757d;
+            /* 文本色 */
+            --text-primary: #2c3e50;
+            --text-secondary: #495057;
+            --text-muted: #6c757d;
+            /* 边框色 */
+            --border-color: #dee2e6;
+            /* 阴影 */
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+            --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.12);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--light-gray);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans SC', '思源黑体', sans-serif;
+            color: var(--text-primary);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            font-size: 16px;
+        }
+
+        /* 全局布局结构 */
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* 左侧导航栏 */
+        .sidebar {
+            width: 200px;
+            background-color: var(--primary-color);
+            color: white;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            transition: all 0.3s ease;
+            z-index: 1000;
+            box-shadow: var(--shadow-md);
+            left: 0;
+            right: auto;
+        }
+
+        /* 主内容区 */
+        .main-content {
+            flex: 1;
+            margin-left: 200px;
+            margin-right: 0;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* 移动端适配 */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.active {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+        }
+
+        /* 侧边栏品牌标识 */
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: white;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* 侧边栏导航 */
+        .sidebar-nav {
+            padding: 0;
+            margin: 0;
+            list-style: none;
+        }
+
+        .sidebar-nav li {
+            margin: 0;
+        }
+
+        .sidebar-nav a {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.25rem 1rem;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+            font-size: 1.1rem;
+            font-weight: 500;
+            width: 100%;
+            text-align: center;
+        }
+
+        .sidebar-nav a:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+            border-left-color: white;
+        }
+
+        .sidebar-nav a.active {
+            background-color: rgba(255, 255, 255, 0.15);
+            color: white;
+            border-left-color: white;
+            font-weight: 600;
+        }
+
+        .sidebar-nav i {
+            margin-right: 0.75rem;
+            font-size: 1.1rem;
+        }
+
+        /* 顶部导航栏 */
+        .top-navbar {
+            background-color: white;
+            padding: 1rem 2rem;
+            box-shadow: var(--shadow-sm);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .top-navbar .navbar-brand {
+            color: var(--primary-color);
+            font-weight: 600;
+            font-size: 1.2rem;
+            text-decoration: none;
+        }
+
+        .top-navbar .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-left: auto;
+        }
+
+        /* 确保用户下拉菜单在最右侧 */
+        .top-navbar .nav-actions .dropdown {
+            margin-left: auto;
+        }
+
+        /* 移动端菜单按钮 */
+        .menu-toggle {
+            background: none;
+            border: none;
+            color: var(--primary-color);
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .menu-toggle {
+                display: block;
+            }
+        }
+
+        /* 主体区域 */
+        .content-area {
+            flex: 1;
+            padding: 2rem;
+        }
+
+        .hero-section {
+            background-color: var(--light-gray);
+            color: var(--text-primary);
+            padding: 60px 0;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .hero-section h1 {
+            font-size: 2.5rem;
+            font-weight: 300;
+            margin-bottom: 1rem;
+            letter-spacing: -0.02em;
+        }
+
+        .hero-section p {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* 卡片 */
+        .card {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: var(--shadow-sm);
+            transition: box-shadow 0.2s ease;
+            background-color: #ffffff;
+            margin-bottom: 1.5rem;
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-md);
+        }
+
+        .card-header {
+            background-color: var(--light-gray);
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+            padding: 1rem 1.5rem;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        /* 按钮 */
+        .btn {
+            border-radius: 4px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            border: 1px solid var(--primary-color);
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            color: #ffffff;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-outline-primary {
+            background-color: transparent;
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .btn-outline-primary:hover {
+            background-color: var(--primary-color);
+            color: #ffffff;
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* 统计卡片 */
+        .stats-card {
+            background-color: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow-sm);
+            transition: box-shadow 0.2s ease;
+        }
+
+        .stats-card:hover {
+            box-shadow: var(--shadow-md);
+        }
+
+        .stats-number {
+            font-size: 2.5rem;
+            font-weight: 300;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .stats-icon {
+            font-size: 2rem;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .stats-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* 表格 */
+        .table {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .table thead th {
+            background-color: var(--light-gray);
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+            padding: 1rem;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.05em;
+        }
+
+        .table tbody td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+
+        .table tbody tr:nth-child(even) {
+            background-color: var(--light-gray);
+        }
+
+        .table tbody tr:hover {
+            background-color: rgba(44, 62, 80, 0.05);
+        }
+
+        /* 表单 */
+        .form-control {
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 0.75rem;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(44, 62, 80, 0.1);
+        }
+
+        .form-label {
+            color: var(--text-secondary);
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        /* 警告框 */
+        .alert {
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .alert-success {
+            background-color: var(--success-color);
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+
+        .alert-danger {
+            background-color: var(--danger-color);
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+
+        .alert-warning {
+            background-color: var(--warning-color);
+            border-color: #ffeaa7;
+            color: #856404;
+        }
+
+        /* 搜索框 */
+        .search-box {
+            background-color: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* 分页 */
+        .pagination {
+            justify-content: center;
+            margin-top: 2rem;
+            gap: 0.5rem;
+        }
+
+        .pagination .page-item .page-link {
+            border-radius: 4px;
+            padding: 0.5rem 1rem;
+            transition: all 0.2s ease;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+
+        .pagination .page-item.active .page-link {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+        }
+
+        .pagination .page-item .page-link:hover {
+            background-color: var(--light-gray);
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .content-area {
+                padding: 1rem;
+            }
+            
+            .hero-section {
+                padding: 40px 0;
+            }
+            
+            .hero-section h1 {
+                font-size: 2rem;
+            }
+            
+            .stats-number {
+                font-size: 2rem;
+            }
+            
+            .table-responsive {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+        }
+
+        /* 标题样式 */
+        h1, h2, h3, h4, h5, h6 {
+            color: var(--text-primary);
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        h1 {
+            font-size: 2rem;
+        }
+
+        h2 {
+            font-size: 1.75rem;
+        }
+
+        h3 {
+            font-size: 1.5rem;
+        }
+
+        h4 {
+            font-size: 1.25rem;
+        }
+
+        h5 {
+            font-size: 1.1rem;
+        }
+
+        h6 {
+            font-size: 1rem;
+        }
+
+        /* 链接样式 */
+        a {
+            color: var(--primary-color);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        a:hover {
+            color: var(--secondary-color);
+        }
+
+        /* 状态徽章 */
+        .badge {
+            border-radius: 12px;
+            padding: 0.25rem 0.75rem;
+            font-weight: 500;
+        }
+
+        .badge-success {
+            background-color: var(--success-color);
+            color: #155724;
+        }
+
+        .badge-warning {
+            background-color: var(--warning-color);
+            color: #856404;
+        }
+
+        .badge-danger {
+            background-color: var(--danger-color);
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <!-- 全局布局 -->
+    <!-- 消息弹窗 -->
+    <div class="modal fade" id="messageModal" tabindex="-1" aria-labelledby="messageModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 rounded-lg shadow-lg">
+                <div class="modal-header bg-[#2c3e50] text-white rounded-t-lg">
+                    <h5 class="modal-title font-weight-600 text-center w-100" id="messageModalLabel" style="font-size: 1.25rem;">
+                        <i class="bi bi-bell-fill me-2"></i><span id="messageTitle"></span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white position-absolute end-3 top-3" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-5">
+                    <div class="bg-white rounded-lg p-4 border border-gray-100">
+                        <p id="messageContent" class="text-gray-700 leading-relaxed whitespace-pre-line"></p>
+                    </div>
+                </div>
+                <div class="modal-footer bg-gray-50 rounded-b-lg border-t border-gray-100">
+                    <button type="button" class="btn btn-[#2c3e50] px-6 py-2 rounded-lg font-weight-500 transition-all hover:shadow-md" data-bs-dismiss="modal">
+                        确定
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <!-- 左侧导航栏 -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-brand">
+                智能图书馆
+            </div>
+            <ul class="sidebar-nav">
+                <!-- AI图书推荐模块 -->
+                <li>
+                    <a href="{{ url_for('ai_recommendation') }}" {% if request.endpoint == 'ai_recommendation' %}class="active"{% endif %}>
+                        🤖 AI图书推荐
+                    </a>
+                </li>
+                <!-- 馆藏图书模块 -->
+                <li>
+                    <a href="{{ url_for('books') }}" {% if request.endpoint == 'books' %}class="active"{% endif %}>
+                        📚 馆藏图书
+                    </a>
+                </li>
+                <!-- 个人中心模块 -->
+                {% if session.user_id %}
+                <li>
+                    <a href="{{ url_for('my_loans') }}" {% if request.endpoint == 'my_loans' %}class="active"{% endif %}>
+                        📖 个人中心
+                    </a>
+                </li>
+                {% endif %}
+                <!-- 公告管理模块 -->
+                {% if session.is_admin %}
+                <li>
+                    <a href="{{ url_for('announcement_management') }}" {% if request.endpoint == 'announcement_management' %}class="active"{% endif %}>
+                        📢 公告管理
+                    </a>
+                </li>
+                {% endif %}
+                <!-- 数据统计模块 -->
+                {% if session.is_admin %}
+                <li>
+                    <a href="{{ url_for('dashboard') }}" {% if request.endpoint == 'dashboard' %}class="active"{% endif %}>
+                        📊 数据统计
+                    </a>
+                </li>
+                {% endif %}
+                <!-- 图书管理模块 -->
+                {% if session.is_admin %}
+                <li>
+                    <a href="{{ url_for('book_management') }}" {% if request.endpoint == 'book_management' %}class="active"{% endif %}>
+                        📕 图书管理
+                    </a>
+                </li>
+                {% endif %}
+                <!-- 借阅管理模块 -->
+                {% if session.is_admin %}
+                <li>
+                    <a href="{{ url_for('loan_management') }}" {% if request.endpoint == 'loan_management' %}class="active"{% endif %}>
+                        📤 借阅管理
+                    </a>
+                </li>
+                {% endif %}
+                <!-- 读者管理模块 -->
+                {% if session.is_admin %}
+                <li>
+                    <a href="{{ url_for('readers') }}" {% if request.endpoint == 'readers' %}class="active"{% endif %}>
+                        👥 读者管理
+                    </a>
+                </li>
+                {% endif %}
+                <!-- API配置管理模块 -->
+                {% if session.is_admin %}
+                <li>
+                    <a href="{{ url_for('ai_api_config') }}" {% if request.endpoint == 'ai_api_config' %}class="active"{% endif %}>
+                        ⚙️ API配置管理
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </aside>
+
+        <!-- 右侧内容区 -->
+        <div class="main-content">
+            <!-- 顶部导航栏 -->
+            <nav class="top-navbar">
+                <button class="menu-toggle" id="menuToggle">
+                    <i class="bi bi-list"></i>
+                </button>
+                <div class="nav-actions">
+                    {% if session.user_id %}
+                    <!-- 消息中心 -->
+                    <div class="dropdown me-3">
+                        <button class="btn btn-outline-primary dropdown-toggle position-relative" type="button" id="messagesDropdown" data-bs-toggle="dropdown">
+                            <i class="bi bi-bell"></i>
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="unreadCount">
+                                0
+                            </span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end w-500px" aria-labelledby="messagesDropdown">
+                            <li>
+                                <div class="p-3">
+                                    <h6 class="mb-0">消息中心</h6>
+                                    <p class="text-sm text-muted mb-0">查看所有推送消息</p>
+                                </div>
+                            </li>
+                            <li>
+                                <div class="border-top border-bottom">
+                                    <div class="p-3 max-h-400 overflow-y-auto" id="messagesList">
+                                        <div class="text-center text-muted py-4">
+                                            暂无消息
+                                        </div>
+                                    </div>
+                                </div>
+                            </li>
+                            <li>
+                                <div class="p-3 text-center">
+                                    <a href="#" class="text-primary text-sm" id="markAllRead">
+                                        标记全部已读
+                                    </a>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                    <!-- 用户菜单 -->
+                    <div class="dropdown">
+                        <button class="btn btn-outline-primary dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle"></i> {{ session.username }}
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{{ url_for('my_loans') }}">
+                                <i class="bi bi-collection"></i> 个人中心
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('logout') }}">
+                                <i class="bi bi-box-arrow-right"></i> 退出登录
+                            </a></li>
+                        </ul>
+                    </div>
+                    {% else %}
+                    <a href="{{ url_for('login') }}" class="btn btn-outline-primary">
+                        <i class="bi bi-box-arrow-in-right"></i> 登录
+                    </a>
+                    <a href="{{ url_for('register') }}" class="btn btn-primary">
+                        <i class="bi bi-person-plus"></i> 注册
+                    </a>
+                    {% endif %}
+                </div>
+            </nav>
+
+            <!-- 消息提示 -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="content-area">
+                        {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {% if category == 'success' %}
+                                <i class="bi bi-check-circle"></i>
+                            {% elif category == 'danger' %}
+                                <i class="bi bi-exclamation-triangle"></i>
+                            {% elif category == 'warning' %}
+                                <i class="bi bi-exclamation-triangle"></i>
+                            {% elif category == 'info' %}
+                                <i class="bi bi-info-circle"></i>
+                            {% endif %}
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <!-- 主要内容 -->
+            <div class="content-area">
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+
+    <style>
+        /* 消息弹窗样式 */
+        .rounded-10 {
+            border-radius: 10px !important;
+        }
+        
+        .modal-content {
+            transition: all 0.3s ease;
+        }
+        
+        .modal-content:hover {
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15) !important;
+        }
+        
+        .modal-header {
+            border-radius: 10px 10px 0 0 !important;
+        }
+        
+        .modal-footer {
+            border-radius: 0 0 10px 10px !important;
+        }
+        
+        .text-gray-700 {
+            color: #495057 !important;
+        }
+        
+        .leading-relaxed {
+            line-height: 1.6 !important;
+        }
+        
+        /* 消息中心样式 */
+        .w-500px {
+            width: 500px !important;
+        }
+        
+        .max-h-400 {
+            max-height: 400px !important;
+        }
+        
+        .text-sm {
+            font-size: 0.875rem !important;
+        }
+        
+        .message-item {
+            padding: 1rem;
+            border-bottom: 1px solid #f1f3f4;
+            transition: all 0.2s ease;
+        }
+        
+        .message-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .message-item.unread {
+            background-color: #e3f2fd;
+        }
+        
+        .message-item:last-child {
+            border-bottom: none;
+        }
+        
+        .message-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #2c3e50;
+        }
+        
+        .cursor-pointer {
+            cursor: pointer !important;
+        }
+        
+        .cursor-pointer:hover {
+            color: #007bff !important;
+        }
+        
+        .message-preview {
+            color: #6c757d;
+            margin-bottom: 0.5rem;
+            line-height: 1.4;
+        }
+        
+        .message-time {
+            font-size: 0.75rem;
+            color: #9ca3af;
+        }
+        
+        /* 消息弹窗样式 */
+        .font-weight-600 {
+            font-weight: 600 !important;
+        }
+        
+        .font-weight-500 {
+            font-weight: 500 !important;
+        }
+        
+        .bg-gray-50 {
+            background-color: #f9fafb !important;
+        }
+        
+        .bg-gray-100 {
+            background-color: #f3f4f6 !important;
+        }
+        
+        .border-gray-100 {
+            border-color: #f3f4f6 !important;
+        }
+        
+        .whitespace-pre-line {
+            white-space: pre-line !important;
+        }
+        
+        .rounded-t-lg {
+            border-top-left-radius: 0.5rem !important;
+            border-top-right-radius: 0.5rem !important;
+        }
+        
+        .rounded-b-lg {
+            border-bottom-left-radius: 0.5rem !important;
+            border-bottom-right-radius: 0.5rem !important;
+        }
+        
+        .transition-all {
+            transition: all 0.3s ease !important;
+        }
+        
+        .hover\:shadow-md:hover {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+        }
+        
+        .btn-[#2c3e50] {
+            background-color: #2c3e50 !important;
+            border-color: #2c3e50 !important;
+            color: white !important;
+        }
+        
+        .btn-[#2c3e50]:hover {
+            background-color: #34495e !important;
+            border-color: #34495e !important;
+        }
+        
+        .btn-outline-gray {
+            background-color: white !important;
+            border-color: #ced4da !important;
+            color: #495057 !important;
+        }
+        
+        .btn-outline-gray:hover {
+            background-color: #f8f9fa !important;
+            border-color: #adb5bd !important;
+            color: #212529 !important;
+        }
+    </style>
+
+    <!-- 脚本文件 -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 移动端菜单切换
+        document.getElementById('menuToggle').addEventListener('click', function() {
+            document.getElementById('sidebar').classList.toggle('active');
+        });
+        
+        // 获取和显示用户消息
+        function fetchMessages() {
+            // 检查是否已登录
+            {% if session.user_id %}
+            fetch('/api/messages')
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success && result.messages.length > 0) {
+                        // 显示消息弹窗
+                        showMessageModal(result.messages[0].title, result.messages[0].content);
+                    }
+                    // 更新消息中心
+                    updateMessageCenter();
+                })
+                .catch(error => {
+                    console.error('Error fetching messages:', error);
+                });
+            {% endif %}
+        }
+        
+        // 显示消息模态框
+        function showMessageModal(title, content) {
+            // 设置消息内容
+            document.getElementById('messageTitle').textContent = title;
+            document.getElementById('messageContent').textContent = content;
+            
+            // 显示模态框
+            const messageModal = new bootstrap.Modal(document.getElementById('messageModal'));
+            messageModal.show();
+        }
+        
+        // 更新消息中心
+        function updateMessageCenter() {
+            // 检查是否已登录
+            {% if session.user_id %}
+            fetch('/api/messages/all')
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        const messages = result.messages;
+                        const messagesList = document.getElementById('messagesList');
+                        const unreadCount = document.getElementById('unreadCount');
+                        
+                        // 更新未读消息计数
+                        const unreadMessages = messages.filter(msg => !msg.is_read);
+                        unreadCount.textContent = unreadMessages.length;
+                        unreadCount.style.display = unreadMessages.length > 0 ? 'inline-block' : 'none';
+                        
+                        // 更新消息列表
+                        if (messages.length > 0) {
+                            messagesList.innerHTML = '';
+                            messages.forEach(msg => {
+                                const messageItem = document.createElement('div');
+                                messageItem.className = `message-item ${!msg.is_read ? 'unread' : ''}`;
+                                
+                                // 格式化日期
+                                const date = new Date(msg.created_at);
+                                const formattedDate = date.toLocaleString('zh-CN', {
+                                    year: 'numeric',
+                                    month: '2-digit',
+                                    day: '2-digit',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                });
+                                
+                                messageItem.innerHTML = `
+                                    <div class="message-title cursor-pointer" data-message-id="${msg.id}" data-message-content="${msg.content}" data-message-title="${msg.title}">
+                                        ${msg.title}
+                                    </div>
+                                    <div class="message-time">${formattedDate}</div>
+                                `;
+                                
+                                messagesList.appendChild(messageItem);
+                                
+                                // 添加点击事件监听器
+                                const titleElement = messageItem.querySelector('.message-title');
+                                titleElement.addEventListener('click', function() {
+                                    const title = this.getAttribute('data-message-title');
+                                    const content = this.getAttribute('data-message-content');
+                                    showMessageModal(title, content);
+                                });
+                            });
+                        } else {
+                            messagesList.innerHTML = `
+                                <div class="text-center text-muted py-4">
+                                    暂无消息
+                                </div>
+                            `;
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error updating message center:', error);
+                });
+            {% endif %}
+        }
+        
+        // 标记全部消息为已读
+        function markAllMessagesAsRead() {
+            // 检查是否已登录
+            {% if session.user_id %}
+            fetch('/api/messages/mark-all-read', {
+                method: 'POST'
+            })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        // 更新消息中心
+                        updateMessageCenter();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error marking messages as read:', error);
+                });
+            {% endif %}
+        }
+        
+        // 页面加载时获取消息
+        window.addEventListener('DOMContentLoaded', function() {
+            fetchMessages();
+        });
+        
+        // 点击消息中心按钮时更新消息
+        document.getElementById('messagesDropdown')?.addEventListener('click', function() {
+            updateMessageCenter();
+        });
+        
+        // 点击标记全部已读
+        document.getElementById('markAllRead')?.addEventListener('click', function(e) {
+            e.preventDefault();
+            markAllMessagesAsRead();
+        });
+    </script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

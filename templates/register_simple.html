@@ -1,0 +1,78 @@
+{% extends "base_simple.html" %}
+
+{% block title %}注册 - 图书馆管理系统{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow-lg border-0 mt-5">
+                <div class="card-header bg-success text-white text-center">
+                    <h4 class="mb-0">
+                        <i class="bi bi-person-plus"></i> 用户注册
+                    </h4>
+                </div>
+                <div class="card-body p-4">
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">
+                                <i class="bi bi-person"></i> 用户名
+                            </label>
+                            <input type="text" class="form-control" id="username" name="username" required>
+                            <div class="form-text">用户名将用于登录系统</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="email" class="form-label">
+                                <i class="bi bi-envelope"></i> 邮箱
+                            </label>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                            <div class="form-text">用于接收图书到期提醒</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">
+                                <i class="bi bi-lock"></i> 密码
+                            </label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                            <div class="form-text">密码长度至少6位</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="confirm_password" class="form-label">
+                                <i class="bi bi-lock-fill"></i> 确认密码
+                            </label>
+                            <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-person-plus"></i> 注册
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <hr>
+                    
+                    <div class="text-center">
+                        <p class="mb-2">已有账户？</p>
+                        <a href="{{ url_for('login') }}" class="btn btn-outline-success">
+                            <i class="bi bi-box-arrow-in-right"></i> 立即登录
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 简单的表单验证
+document.getElementById('confirm_password').addEventListener('input', function() {
+    const password = document.getElementById('password').value;
+    const confirmPassword = this.value;
+    
+    if (password !== confirmPassword) {
+        this.setCustomValidity('密码不匹配');
+    } else {
+        this.setCustomValidity('');
+    }
+});
+</script>
+{% endblock %}

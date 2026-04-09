@@ -1,0 +1,132 @@
+{% extends "base_simple.html" %}
+
+{% block title %}借阅请求管理 - 图书馆管理系统{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">借阅请求管理</h2>
+    
+    <!-- 消息提示 -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <!-- 借阅请求列表 -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            借阅请求列表
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>编号</th>
+                            <th>用户</th>
+                            <th>图书</th>
+                            <th>申请时间</th>
+                            <th>状态</th>
+                            <th>取货码</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for request in requests %}
+                        <tr>
+                            <td>{{ request.id }}</td>
+                            <td>{{ request.username }}</td>
+                            <td>{{ request.title }}</td>
+                            <td>{{ request.request_date[:19] }}</td>
+                            <td>
+                                {% if request.status == 'pending' %}
+                                    <span class="badge bg-warning">待审批</span>
+                                {% elif request.status == 'approved' %}
+                                    <span class="badge bg-success">已批准</span>
+                                {% elif request.status == 'rejected' %}
+                                    <span class="badge bg-danger">已拒绝</span>
+                                {% elif request.status == 'expired' %}
+                                    <span class="badge bg-secondary">已失效</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if request.pickup_code %}
+                                    <span class="font-weight-bold text-primary">{{ request.pickup_code }}</span>
+                                    {% if request.pickup_confirmed %}
+                                        <span class="badge bg-success ms-2">已取货</span>
+                                    {% endif %}
+                                {% else %}
+                                    {% if request.status == 'approved' %}
+                                        <span class="text-muted">生成中...</span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if request.status == 'pending' %}
+                                    <!-- 审批按钮 -->
+                                    <form action="{{ url_for('approve_loan_request', request_id=request.id) }}" method="post" class="d-inline">
+                                        <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('确定要批准这个借阅请求吗？');">
+                                            <i class="bi bi-check-circle"></i> 批准
+                                        </button>
+                                    </form>
+                                    
+                                    <!-- 拒绝按钮 -->
+                                    <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#rejectModal{{ request.id }}">
+                                        <i class="bi bi-x-circle"></i> 拒绝
+                                    </button>
+                                {% elif request.status == 'approved' and request.pickup_code and not request.pickup_confirmed %}
+                                    <!-- 确认取货按钮 -->
+                                    <form action="{{ url_for('confirm_pickup', request_id=request.id) }}" method="post" class="d-inline">
+                                        <button type="submit" class="btn btn-primary btn-sm" onclick="return confirm('确定要确认用户取货吗？');">
+                                            <i class="bi bi-check-circle"></i> 确认取货
+                                        </button>
+                                    </form>
+                                {% elif request.status == 'approved' and request.pickup_confirmed %}
+                                    <span class="text-muted">已取货</span>
+                                {% elif request.status == 'expired' %}
+                                    <span class="text-muted text-danger">已失效</span>
+                                {% elif request.status == 'rejected' %}
+                                    <span class="text-muted">已拒绝</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        
+                        <!-- 拒绝原因模态框 -->
+                        <div class="modal fade" id="rejectModal{{ request.id }}" tabindex="-1" aria-labelledby="rejectModalLabel{{ request.id }}" aria-hidden="true">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="rejectModalLabel{{ request.id }}">拒绝借阅请求</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <form action="{{ url_for('reject_loan_request', request_id=request.id) }}" method="post">
+                                        <div class="modal-body">
+                                            <div class="mb-3">
+                                                <label for="rejection_reason{{ request.id }}" class="form-label">拒绝原因</label>
+                                                <textarea class="form-control" id="rejection_reason{{ request.id }}" name="rejection_reason" rows="3" required></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                                            <button type="submit" class="btn btn-danger">确认拒绝</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

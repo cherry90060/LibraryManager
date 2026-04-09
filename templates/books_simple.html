@@ -1,0 +1,149 @@
+{% extends "base_simple.html" %}
+
+{% block title %}图书浏览 - 图书馆管理系统{% endblock %}
+
+{% block scripts %}
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="text-center mb-4">
+                图书浏览
+            </h1>
+        </div>
+    </div>
+    
+    <!-- 搜索和筛选 -->
+    <div class="search-box">
+        <form method="GET" class="row g-3">
+            <div class="col-md-6">
+                <label for="search" class="form-label">
+                    <i class="bi bi-search"></i> 搜索图书
+                </label>
+                <input type="text" class="form-control" id="search" name="search" 
+                       value="{{ search }}" placeholder="输入书名、作者或ISBN">
+            </div>
+            <div class="col-md-4">
+                <label for="category" class="form-label">
+                    <i class="bi bi-tag"></i> 分类
+                </label>
+                <select class="form-select" id="category" name="category">
+                    <option value="">所有分类</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.category }}" {% if selected_category == cat.category %}selected{% endif %}>
+                        {{ cat.category }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search"></i> 搜索
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- 搜索结果统计 -->
+    {% if search or selected_category %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> 
+        找到 {{ books|length }} 本图书
+        {% if search %}
+            包含 "<strong>{{ search }}</strong>"
+        {% endif %}
+        {% if selected_category %}
+            分类为 "<strong>{{ selected_category }}</strong>"
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- 图书列表 -->
+    <div class="row">
+        {% for book in books %}
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <!-- 封面图片 -->
+                    <div style="height: 180px; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem; overflow: hidden; border-radius: 4px;">
+                        <img src="{{ url_for('static', filename=book.cover_image) if book.cover_image else url_for('static', filename='book_covers/default_cover.svg') }}?v={{ range(1, 999999) | random }}" 
+                             alt="{{ book.title }} 封面" 
+                             style="width: 120px; height: 160px; object-fit: cover; box-shadow: 0 2px 4px rgba(0,0,0,0.1); min-width: 120px; min-height: 160px; max-width: 120px; max-height: 160px;"
+                             onerror="this.src='{{ url_for('static', filename='book_covers/default_cover.svg') }}';">
+                    </div>
+                    
+                    <h5 class="card-title">{{ book.title }}</h5>
+                    <h6 class="card-subtitle mb-2" style="color: var(--text-secondary);">
+                        <i class="bi bi-person"></i> {{ book.author }}
+                    </h6>
+                    
+                    {% if book.isbn %}
+                    <small class="d-block mb-2" style="color: var(--text-muted);">
+                        <i class="bi bi-upc"></i> ISBN: {{ book.isbn }}
+                    </small>
+                    {% endif %}
+                    
+                    <p class="card-text">
+                        {{ (book.description or '')[:120] }}{% if (book.description or '')|length > 120 %}...{% endif %}
+                    </p>
+                    
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <small style="color: var(--text-muted);">
+                            <i class="bi bi-tag"></i> {{ book.category or '未分类' }}
+                        </small>
+                        <span class="badge" style="background-color: {% if book.available_copies > 0 %}var(--light-gray){% else %}#f8f9fa{% endif %}; color: var(--text-primary); border: 1px solid var(--border-color);">
+                            <i class="bi bi-{% if book.available_copies > 0 %}check-circle{% else %}x-circle{% endif %}"></i> 
+                            {{ book.available_copies }}/{{ book.total_copies }}
+                        </span>
+                    </div>
+                    
+                    {% if book.available_copies == 0 %}
+                    <div class="alert alert-warning py-2 mb-2">
+                        <i class="bi bi-exclamation-triangle"></i> 暂无库存
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer" style="background-color: var(--light-gray); border-top: 1px solid var(--border-color);">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('book_detail', book_id=book.id) }}" class="btn btn-outline-primary">
+                            <i class="bi bi-eye"></i> 查看详情
+                        </a>
+                        {% if session.user_id and book.available_copies > 0 %}
+                        <form method="POST" action="{{ url_for('borrow_book', book_id=book.id) }}">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-plus-circle"></i> 立即借阅
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12">
+            <div class="text-center py-5">
+                <i class="bi bi-book" style="font-size: 4rem; color: var(--medium-gray);"></i>
+                <h4 class="mt-3" style="color: var(--text-secondary);">暂无图书</h4>
+                <p style="color: var(--text-muted);">
+                    {% if search or selected_category %}
+                        尝试调整搜索条件或筛选条件
+                    {% else %}
+                        图书馆暂时没有图书
+                    {% endif %}
+                </p>
+                {% if search or selected_category %}
+                <a href="{{ url_for('books') }}" class="btn btn-primary">
+                    <i class="bi bi-arrow-left"></i> 返回全部图书
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

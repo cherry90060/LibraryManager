@@ -1,0 +1,368 @@
+{% extends "base_simple.html" %}
+
+{% block title %}管理面板 - 图书馆管理系统{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="text-center mb-4">
+                <i class="bi bi-gear"></i> 管理员面板
+            </h1>
+        </div>
+    </div>
+
+    <!-- 统计信息 -->
+    <div class="row mb-4">
+        <div class="col-lg-2 col-md-4 mb-3">
+            <div class="card text-center bg-primary text-white">
+                <div class="card-body">
+                    <h3>{{ total_books }}</h3>
+                    <p class="mb-0">总图书数</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 mb-3">
+            <div class="card text-center bg-success text-white">
+                <div class="card-body">
+                    <h3>{{ total_users }}</h3>
+                    <p class="mb-0">注册用户</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 mb-3">
+            <div class="card text-center bg-warning text-white">
+                <div class="card-body">
+                    <h3>{{ active_loans }}</h3>
+                    <p class="mb-0">正在借阅</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 mb-3">
+            <div class="card text-center bg-danger text-white">
+                <div class="card-body">
+                    <h3>{{ overdue_loans }}</h3>
+                    <p class="mb-0">逾期未还</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 mb-3">
+            <div class="card text-center bg-info text-white">
+                <div class="card-body">
+                    <h3>{{ pending_requests|default(0) }}</h3>
+                    <p class="mb-0">待审批请求</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 快速操作 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="bi bi-lightning"></i> 快速操作
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-2 mb-3">
+                    <a href="#" class="btn btn-primary w-100" onclick="showAddBookModal()">
+                        <i class="bi bi-plus-circle"></i> 添加图书
+                    </a>
+                </div>
+                <div class="col-md-2 mb-3">
+                    <a href="#" class="btn btn-success w-100" onclick="showAddUserModal()">
+                        <i class="bi bi-person-plus"></i> 添加用户
+                    </a>
+                </div>
+                <div class="col-md-2 mb-3">
+                    <a href="{{ url_for('admin_loan_requests') }}" class="btn btn-info w-100">
+                        <i class="bi bi-hourglass"></i> 借阅请求
+                    </a>
+                </div>
+                <div class="col-md-2 mb-3">
+                    <a href="#" class="btn btn-warning w-100" onclick="generateReport()">
+                        <i class="bi bi-file-earmark-text"></i> 生成报告
+                    </a>
+                </div>
+                <div class="col-md-2 mb-3">
+                    <a href="#" class="btn btn-danger w-100" onclick="exportData()">
+                        <i class="bi bi-download"></i> 导出数据
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 图书管理 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="bi bi-book"></i> 图书管理
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>书名</th>
+                            <th>作者</th>
+                            <th>分类</th>
+                            <th>总库存</th>
+                            <th>可借数量</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for book in books %}
+                        <tr>
+                            <td>{{ book.title }}</td>
+                            <td>{{ book.author }}</td>
+                            <td>
+                                <span class="badge bg-secondary">{{ book.category or '未分类' }}</span>
+                            </td>
+                            <td>{{ book.total_copies }}</td>
+                            <td>
+                                <span class="badge {% if book.available_copies > 0 %}bg-success{% else %}bg-danger{% endif %}">
+                                    {{ book.available_copies }}
+                                </span>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" onclick="editBook({{ book.id }})">
+                                    <i class="bi bi-pencil"></i> 编辑
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteBook({{ book.id }})">
+                                    <i class="bi bi-trash"></i> 删除
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 用户管理 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="bi bi-people"></i> 用户管理
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>用户名</th>
+                            <th>邮箱</th>
+                            <th>注册时间</th>
+                            <th>状态</th>
+                            <th>权限</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td>{{ user.username }}</td>
+                            <td>{{ user.email or '未设置' }}</td>
+                            <td>{{ user.created_at[:10] }}</td>
+                            <td>
+                                <span class="badge {% if user.is_active %}bg-success{% else %}bg-danger{% endif %}">
+                                    {% if user.is_active %}正常{% else %}禁用{% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                {% if user.is_admin %}
+                                    <span class="badge bg-warning">管理员</span>
+                                {% else %}
+                                    <span class="badge bg-info">普通用户</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" onclick="editUser({{ user.id }})">
+                                    <i class="bi bi-pencil"></i> 编辑
+                                </button>
+                                {% if not user.is_admin %}
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteUser({{ user.id }})">
+                                    <i class="bi bi-trash"></i> 删除
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 借阅管理 -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="bi bi-collection"></i> 借阅管理
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>用户</th>
+                            <th>图书</th>
+                            <th>借阅日期</th>
+                            <th>应还日期</th>
+                            <th>取货码</th>
+                            <th>状态</th>
+                            <th>逾期费</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for loan in loans %}
+                        <tr class="{% if not loan.is_returned %}table-warning{% endif %}">
+                            <td>{{ loan.username }}</td>
+                            <td>{{ loan.title }}</td>
+                            <td>{{ loan.loan_date[:10] }}</td>
+                            <td>{{ loan.due_date[:10] }}</td>
+                            <td>
+                                {% if loan.pickup_code %}
+                                    {{ loan.pickup_code }}
+                                    {% if loan.pickup_confirmed %}
+                                        <br>
+                                        <span class="badge bg-success">已取货</span>
+                                    {% else %}
+                                        <br>
+                                        <span class="badge bg-info">待取货</span>
+                                    {% endif %}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if loan.is_returned %}
+                                    <span class="badge bg-success">已归还</span>
+                                {% else %}
+                                    <span class="badge bg-warning">借阅中</span>
+                                    {% if loan.due_date_dt < current_date %}
+                                        <span class="badge bg-danger">已逾期</span>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if loan.fine_amount and loan.fine_amount > 0 %}
+                                    <span class="text-danger">¥{{ "%.2f"|format(loan.fine_amount) }}</span>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if not loan.is_returned and loan.pickup_code and not loan.pickup_confirmed %}
+                                    <form action="{{ url_for('confirm_pickup', request_id=loan.id) }}" method="post" class="d-inline">
+                                        <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('确认用户已取货吗？');">
+                                            <i class="bi bi-check-circle"></i> 确认取货
+                                        </button>
+                                    </form>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 添加图书模态框 -->
+<div class="modal fade" id="addBookModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">添加图书</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addBookForm">
+                    <div class="mb-3">
+                        <label class="form-label">书名</label>
+                        <input type="text" class="form-control" name="title" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">作者</label>
+                        <input type="text" class="form-control" name="author" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">ISBN</label>
+                        <input type="text" class="form-control" name="isbn">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">分类</label>
+                        <input type="text" class="form-control" name="category">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">库存数量</label>
+                        <input type="number" class="form-control" name="total_copies" value="1" min="1" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">简介</label>
+                        <textarea class="form-control" name="description" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="submitAddBook()">添加</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 简单的管理员功能实现
+function showAddBookModal() {
+    var modal = new bootstrap.Modal(document.getElementById('addBookModal'));
+    modal.show();
+}
+
+function submitAddBook() {
+    alert('此功能需要连接数据库添加，实际使用中会提交到服务器');
+    var modal = bootstrap.Modal.getInstance(document.getElementById('addBookModal'));
+    modal.hide();
+}
+
+function editBook(bookId) {
+    alert('编辑图书功能 - ID: ' + bookId);
+}
+
+function deleteBook(bookId) {
+    if (confirm('确认删除这本图书吗？')) {
+        alert('删除图书功能 - ID: ' + bookId);
+    }
+}
+
+function editUser(userId) {
+    alert('编辑用户功能 - ID: ' + userId);
+}
+
+function deleteUser(userId) {
+    if (confirm('确认删除这个用户吗？')) {
+        alert('删除用户功能 - ID: ' + userId);
+    }
+}
+
+function generateReport() {
+    alert('生成报告功能 - 将会导出当前的统计报表');
+}
+
+function exportData() {
+    alert('导出数据功能 - 将会导出所有数据到Excel文件');
+}
+</script>
+{% endblock %}

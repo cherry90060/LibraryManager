@@ -1,0 +1,244 @@
+{% extends "base_simple.html" %}
+
+{% block title %}我的借阅 - 图书馆管理系统{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="text-center">
+                我的借阅
+            </h1>
+        </div>
+    </div>
+
+
+
+    {% if loans %}
+    <!-- 借阅统计 -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-primary">{{ loans|length }}</h3>
+                    <p class="mb-0">总借阅数</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-warning">
+                        {{ loans|selectattr('is_returned', 'equalto', false)|list|length }}
+                    </h3>
+                    <p class="mb-0">当前借阅</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-success">{{ loans|selectattr('is_returned', 'equalto', true)|list|length }}</h3>
+                    <p class="mb-0">已归还</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-danger">
+                        {{ loans|selectattr('is_overdue', 'equalto', true)|list|length }}
+                    </h3>
+                    <p class="mb-0">逾期未还</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 借阅记录 -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="bi bi-list-ul"></i> 借阅记录
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>图书信息</th>
+                            <th>日期</th>
+                            <th>应还日期</th>
+                            <th>取货码</th>
+                            <th>取货状态</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- 待审批借阅请求 -->
+                        {% for request in requests %}
+                        <tr>
+                            <td>
+                                <div>
+                                    <h6 class="mb-1">{{ request.title }}</h6>
+                                    <small class="text-muted">待审批</small>
+                                </div>
+                            </td>
+                            <td>{{ request.request_date[:19] }}</td>
+                            <td>
+                                <span class="text-muted">-</span>
+                            </td>
+                            <td>
+                                <span class="text-muted">-</span>
+                            </td>
+                            <td>
+                                <span class="text-muted">-</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-warning">
+                                    <i class="bi bi-hourglass"></i> 待审批
+                                </span>
+                            </td>
+                            <td>
+                                <div class="cancel-container">
+                                    <form action="{{ url_for('cancel_loan_request', request_id=request.id) }}" method="post" class="d-inline">
+                                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('确定要撤销这个借阅请求吗？')">
+                                            <i class="bi bi-x-circle"></i> 撤销
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        
+                        <!-- 借阅记录 -->
+                        {% for loan in loans %}
+                        <tr>
+                            <td>
+                                <div>
+                                    <h6 class="mb-1">{{ loan.title }}</h6>
+                                    <small class="text-muted">
+                                        <i class="bi bi-person"></i> {{ loan.author }}
+                                    </small>
+                                    {% if loan.isbn %}
+                                    <br>
+                                    <small class="text-muted">
+                                        <i class="bi bi-upc"></i> {{ loan.isbn }}
+                                    </small>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>{{ loan.loan_date[:19] }}</td>
+                            <td>
+                                {{ loan.due_date[:19] }}
+                                {% if not loan.is_returned and loan.is_overdue %}
+                                <br>
+                                <span class="badge bg-danger">已逾期</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if loan.pickup_code %}
+                                    <div class="text-center">
+                                        <strong>{{ loan.pickup_code }}</strong>
+                                        <br>
+                                        <small class="text-muted">凭此码取书</small>
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if loan.pickup_code %}
+                                    {% if loan.pickup_confirmed %}
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle"></i> 已取货
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-info">
+                                            <i class="bi bi-box"></i> 待取货
+                                        </span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if loan.is_returned %}
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle"></i> 已归还
+                                    </span>
+                                    {% if loan.return_date %}
+                                    <br>
+                                    <small class="text-muted">{{ loan.return_date[:19] }}</small>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge bg-warning">
+                                        <i class="bi bi-clock"></i> 借阅中
+                                    </span>
+                                    {% if loan.is_overdue %}
+                                    <br>
+                                    <small class="text-danger">已逾期</small>
+                                    {% endif %}
+                                {% endif %}
+                                
+                                {% if loan.fine_amount and loan.fine_amount > 0 %}
+                                <br>
+                                <small class="text-danger">
+                                    <i class="bi bi-exclamation-triangle"></i>
+                                    逾期费：{{ "%.2f"|format(loan.fine_amount) }}元
+                                </small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if not loan.is_returned %}
+                                <form method="POST" action="{{ url_for('return_book', loan_id=loan.id) }}" 
+                                      style="display: inline;" 
+                                      onsubmit="return confirm('确认归还《{{ loan.title }}》吗？')">
+                                    <button type="submit" class="btn btn-success btn-sm">
+                                        <i class="bi bi-arrow-return-left"></i> 归还
+                                    </button>
+                                </form>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 借阅规则提示 -->
+    <div class="alert alert-info mt-4">
+        <h6><i class="bi bi-info-circle"></i> 借阅规则</h6>
+        <ul class="mb-0">
+            <li>每本书借阅期限为14天</li>
+            <li>每用户最多同时借阅5本书</li>
+            <li>逾期每天收取0.5元费用</li>
+            <li>请按时归还，避免产生逾期费用</li>
+        </ul>
+    </div>
+
+    {% else %}
+    <!-- 无借阅记录 -->
+    <div class="text-center py-5">
+        <i class="bi bi-collection" style="font-size: 4rem; opacity: 0.3;"></i>
+        <h4 class="text-muted mt-3">暂无借阅记录</h4>
+        <p class="text-muted">您还没有借阅任何图书</p>
+        <a href="{{ url_for('books') }}" class="btn btn-primary">
+            <i class="bi bi-search"></i> 浏览图书
+        </a>
+    </div>
+    {% endif %}
+
+
+</div>
+
+<script>
+// 移除倒计时功能，用户可以随时撤销借阅请求
+</script>
+{% endblock %}

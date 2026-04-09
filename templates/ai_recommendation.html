@@ -1,0 +1,354 @@
+{% extends "base_simple.html" %}
+
+{% block title %}AI图书推荐系统 - 图书馆管理系统{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="text-center">
+                AI图书推荐系统
+            </h1>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-4 col-md-5 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        推荐需求
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="recommendationForm">
+                        <div class="mb-3">
+                            <label class="form-label">阅读需求</label>
+                            <textarea 
+                                class="form-control" 
+                                id="userRequirement" 
+                                rows="6" 
+                                placeholder="请输入你的阅读需求（如：推荐3本入门级Python编程图书、适合初中生的科幻小说）"
+                                required
+                            ></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">推荐数量</label>
+                            <select class="form-select" id="recommendCount">
+                                <option value="1">1本</option>
+                                <option value="2">2本</option>
+                                <option value="3" selected>3本</option>
+                                <option value="4">4本</option>
+                                <option value="5">5本</option>
+                                <option value="6">6本</option>
+                                <option value="7">7本</option>
+                                <option value="8">8本</option>
+                                <option value="9">9本</option>
+                                <option value="10">10本</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">图书类型</label>
+                            <select class="form-select" id="bookType">
+                                <option value="">全部</option>
+                                <option value="小说">小说</option>
+                                <option value="科普">科普</option>
+                                <option value="教材">教材</option>
+                                <option value="历史">历史</option>
+                                <option value="哲学">哲学</option>
+                                <option value="计算机">计算机</option>
+                                <option value="经济">经济</option>
+                                <option value="艺术">艺术</option>
+                                <option value="科学">科学</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">阅读人群</label>
+                            <select class="form-select" id="targetAudience">
+                                <option value="">全部</option>
+                                <option value="学生">学生</option>
+                                <option value="成人">成人</option>
+                                <option value="儿童">儿童</option>
+                                <option value="职场人">职场人</option>
+                                <option value="老年人">老年人</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100" id="submitBtn">
+                            智能推荐
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8 col-md-7">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        推荐结果
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="loadingState" class="loading-state" style="display: none;">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">加载中...</span>
+                            </div>
+                            <p class="mt-3">DeepSeek正在为你推荐图书...📚</p>
+                        </div>
+                    </div>
+
+                    <div id="emptyState" class="empty-state">
+                        <div class="text-center">
+                            <i class="bi bi-book-x" style="font-size: 80px; color: #ccc;"></i>
+                            <p class="mt-3 text-muted">暂无匹配的推荐结果，可调整需求重新尝试</p>
+                        </div>
+                    </div>
+
+                    <div id="resultsContainer" class="results-container">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+.loading-state,
+.empty-state {
+    padding: 60px 20px;
+}
+
+.results-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.book-card {
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 20px;
+    transition: all 0.3s ease;
+    height: 100%;
+}
+
+.book-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-md);
+}
+
+.book-cover {
+    width: 100%;
+    height: 180px;
+    background: var(--primary-color);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 60px;
+    margin-bottom: 15px;
+}
+
+.book-title {
+    font-weight: 600;
+    font-size: 18px;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+}
+
+.book-author {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+.book-publisher {
+    color: var(--text-muted);
+    font-size: 12px;
+    margin-bottom: 10px;
+}
+
+.book-reason {
+    background: var(--light-gray);
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+    line-height: 1.5;
+}
+
+.book-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.book-tag {
+    background: var(--primary-color);
+    color: white;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+}
+
+@media (max-width: 768px) {
+    .results-container {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+<script>
+async function getActiveApiConfig() {
+    try {
+        const response = await fetch('/api/ai_api_config/active');
+        const result = await response.json();
+        
+        if (result.success && result.config) {
+            return {
+                endpoint: result.config.api_endpoint,
+                key: result.config.api_key
+            };
+        } else {
+            return null;
+        }
+    } catch (error) {
+        console.error('获取API配置失败:', error);
+        return null;
+    }
+}
+
+document.getElementById('recommendationForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const submitBtn = document.getElementById('submitBtn');
+    const loadingState = document.getElementById('loadingState');
+    const emptyState = document.getElementById('emptyState');
+    const resultsContainer = document.getElementById('resultsContainer');
+    
+    const userRequirement = document.getElementById('userRequirement').value;
+    const recommendCount = document.getElementById('recommendCount').value;
+    const bookType = document.getElementById('bookType').value;
+    const targetAudience = document.getElementById('targetAudience').value;
+    
+    const apiConfig = await getActiveApiConfig();
+    
+    if (!apiConfig) {
+        alert('系统未配置AI API，请联系管理员配置');
+        return;
+    }
+    
+    const apiEndpoint = apiConfig.endpoint;
+    const apiKey = apiConfig.key;
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> 加载中...';
+    loadingState.style.display = 'block';
+    emptyState.style.display = 'none';
+    resultsContainer.innerHTML = '';
+    
+    try {
+        const requestData = {
+            model: "deepseek-chat",
+            messages: [
+                {
+                    role: "user",
+                    content: `请推荐${recommendCount}本${bookType ? bookType + '类' : ''}图书，适合${targetAudience ? targetAudience : '大众'}阅读，需求：${userRequirement}。要求返回JSON格式，包含字段：书名、作者、出版社、推荐理由、标签（数组）。请确保推荐的都是真实存在的图书。`
+                }
+            ],
+            temperature: 0.7,
+            max_tokens: 2000
+        };
+        
+        const response = await fetch(apiEndpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify(requestData)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`API请求失败: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.choices && result.choices.length > 0) {
+            const content = result.choices[0].message.content;
+            
+            let books;
+            try {
+                books = JSON.parse(content);
+            } catch (e) {
+                const jsonMatch = content.match(/\[[\s\S]*\]/);
+                if (jsonMatch) {
+                    books = JSON.parse(jsonMatch[0]);
+                } else {
+                    throw new Error('无法解析API返回的数据');
+                }
+            }
+            
+            if (Array.isArray(books) && books.length > 0) {
+                displayResults(books);
+            } else {
+                throw new Error('API返回的数据格式不正确');
+            }
+        } else {
+            throw new Error('API返回的数据为空');
+        }
+    } catch (error) {
+        console.error('推荐失败:', error);
+        alert('推荐失败: ' + error.message);
+        emptyState.style.display = 'block';
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '智能推荐';
+        loadingState.style.display = 'none';
+    }
+});
+
+function displayResults(books) {
+    const resultsContainer = document.getElementById('resultsContainer');
+    const emptyState = document.getElementById('emptyState');
+    
+    emptyState.style.display = 'none';
+    resultsContainer.innerHTML = '';
+    
+    books.forEach((book, index) => {
+        const card = document.createElement('div');
+        card.className = 'book-card';
+        
+        const tags = book.tags || [];
+        const tagsHtml = tags.map(tag => `<span class="book-tag">${tag}</span>`).join('');
+        
+        card.innerHTML = `
+            <div class="book-cover">
+                <i class="bi bi-book"></i>
+            </div>
+            <div class="book-title">${book.书名 || book.title || '未知书名'}</div>
+            <div class="book-author">作者：${book.作者 || book.author || '未知作者'}</div>
+            <div class="book-publisher">出版社：${book.出版社 || book.publisher || '未知出版社'}</div>
+            <div class="book-reason">
+                <strong>推荐理由：</strong>${book.推荐理由 || book.reason || '暂无推荐理由'}
+            </div>
+            <div class="book-tags">
+                ${tagsHtml}
+            </div>
+        `;
+        
+        resultsContainer.appendChild(card);
+    });
+}
+</script>
+{% endblock %}

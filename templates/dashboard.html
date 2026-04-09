@@ -1,0 +1,505 @@
+{% extends "base_simple.html" %}
+
+{% block title %}数据统计 - 图书馆管理系统{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="text-center">
+                数据统计
+            </h1>
+        </div>
+    </div>
+
+    <!-- 数据看板 -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card stats-card">
+                <i class="bi bi-journal-bookmark stats-icon"></i>
+                <div class="stats-number" id="totalBooks">0</div>
+                <div class="stats-label">图书总库存</div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card stats-card">
+                <i class="bi bi-bookmark-check stats-icon"></i>
+                <div class="stats-number" id="availableBooks">0</div>
+                <div class="stats-label">可借数量</div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card stats-card">
+                <i class="bi bi-calendar-day stats-icon"></i>
+                <div class="stats-number" id="todayLoans">0</div>
+                <div class="stats-label">今日借阅数</div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card stats-card">
+                <i class="bi bi-exclamation-triangle stats-icon"></i>
+                <div class="stats-number" id="overdueLoans">0</div>
+                <div class="stats-label">逾期记录数</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 库存预警 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        库存预警
+                        <span class="badge bg-warning" id="lowStockCount">0</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="lowStockBooks" class="alert alert-warning">
+                        暂无库存预警
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 可视化图表 -->
+    <div class="row mb-4">
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        图书分类占比
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div style="height: 350px; display: flex; align-items: center; justify-content: center;">
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        读者类型分布
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div style="height: 350px; display: flex; align-items: center; justify-content: center;">
+                        <canvas id="userChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        月度借阅量趋势
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="monthlyChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 报表导出 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        报表导出
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body text-center">
+                                    <h6 class="mb-3">月度借阅报表</h6>
+                                    <div class="mb-3">
+                                        <label class="form-label">开始日期</label>
+                                        <input type="date" class="form-control" id="monthlyLoansStartDate">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">结束日期</label>
+                                        <input type="date" class="form-control" id="monthlyLoansEndDate">
+                                    </div>
+                                    <button class="btn btn-primary w-100" onclick="exportReport('monthly_loans')">
+                                        <i class="bi bi-file-earmark-excel"></i> 导出Excel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body text-center">
+                                    <h6 class="mb-3">库存盘点报表</h6>
+                                    <div class="mb-3">
+                                        <label class="form-label">分类</label>
+                                        <select class="form-select" id="inventoryCategory">
+                                            <option value="">全部分类</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">状态</label>
+                                        <select class="form-select" id="inventoryStatus">
+                                            <option value="">全部状态</option>
+                                            <option value="可借阅">可借阅</option>
+                                            <option value="已下架">已下架</option>
+                                        </select>
+                                    </div>
+                                    <button class="btn btn-primary w-100" onclick="exportReport('inventory')">
+                                        <i class="bi bi-file-earmark-excel"></i> 导出Excel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body text-center">
+                                    <h6 class="mb-3">读者信用分报表</h6>
+                                    <p class="text-muted">导出所有读者的借阅统计和信用情况</p>
+                                    <button class="btn btn-primary w-100" onclick="exportReport('user_credit')">
+                                        <i class="bi bi-file-earmark-excel"></i> 导出Excel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+<script>
+let categoryChart, userChart, monthlyChart;
+
+// 加载统计数据
+function loadDashboardStats() {
+    fetch('/api/dashboard/stats')
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                const stats = result.stats;
+                document.getElementById('totalBooks').textContent = stats.total_books;
+                document.getElementById('availableBooks').textContent = stats.available_books;
+                document.getElementById('todayLoans').textContent = stats.today_loans;
+                document.getElementById('overdueLoans').textContent = stats.overdue_loans;
+                document.getElementById('lowStockCount').textContent = stats.low_stock_books;
+                
+                // 加载库存预警图书
+                loadLowStockBooks();
+            }
+        })
+        .catch(error => {
+            console.error('加载统计数据失败:', error);
+        });
+}
+
+// 加载库存预警图书
+function loadLowStockBooks() {
+    fetch('/api/books?stock_status=不足')
+        .then(response => response.json())
+        .then(result => {
+            const lowStockDiv = document.getElementById('lowStockBooks');
+            if (result.success && result.books.length > 0) {
+                let html = '<ul class="list-group">';
+                result.books.forEach(book => {
+                    html += `
+                        <li class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                            <a href="/book/${book.id}" class="flex-grow-1 text-decoration-none text-dark">
+                                <div>
+                                    <strong>${book.title}</strong>
+                                    <small class="text-muted d-block">作者: ${book.author}</small>
+                                </div>
+                            </a>
+                            <span class="badge bg-warning">可借: ${book.available_copies}</span>
+                        </li>
+                    `;
+                });
+                html += '</ul>';
+                lowStockDiv.innerHTML = html;
+            } else {
+                lowStockDiv.innerHTML = '暂无库存预警';
+            }
+        })
+        .catch(error => {
+            console.error('加载库存预警图书失败:', error);
+        });
+}
+
+// 加载图书分类占比
+function loadCategoryDistribution() {
+    fetch('/api/dashboard/category_distribution')
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                const data = result.data;
+                const labels = data.map(item => item.category);
+                const values = data.map(item => item.count);
+                
+                const ctx = document.getElementById('categoryChart').getContext('2d');
+                const total = values.reduce((a, b) => a + b, 0);
+                categoryChart = new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: values,
+                            backgroundColor: [
+                                '#FF6384',
+                                '#36A2EB',
+                                '#FFCE56',
+                                '#4BC0C0',
+                                '#9966FF',
+                                '#FF9F40'
+                            ],
+                            hoverOffset: 20
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: {
+                            animateScale: true,
+                            animateRotate: true,
+                            duration: 1000,
+                            easing: 'easeOutQuart'
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    boxWidth: 12,
+                                    padding: 8,
+                                    font: {
+                                        size: 11
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const value = context.parsed;
+                                        const percentage = ((value / total) * 100).toFixed(1);
+                                        return `${context.label}: ${value}本 (${percentage}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        })
+        .catch(error => {
+            console.error('加载分类占比数据失败:', error);
+        });
+}
+
+// 加载读者类型分布
+function loadUserDistribution() {
+    fetch('/api/dashboard/user_distribution')
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                const data = result.data;
+                const labels = data.map(item => item.type);
+                const values = data.map(item => item.count);
+                
+                const ctx = document.getElementById('userChart').getContext('2d');
+                const maxValue = Math.max(...values);
+                userChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: '用户数量',
+                            data: values,
+                            backgroundColor: [
+                                '#FF6384',
+                                '#36A2EB'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1,
+                                    precision: 0,
+                                    suggestedMax: Math.ceil(maxValue * 1.2)
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        })
+        .catch(error => {
+            console.error('加载读者类型分布失败:', error);
+        });
+}
+
+// 加载月度借阅量趋势
+function loadMonthlyLoans() {
+    fetch('/api/dashboard/monthly_loans')
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                const data = result.data;
+                const labels = data.map(item => item.month);
+                const values = data.map(item => item.count);
+                
+                const ctx = document.getElementById('monthlyChart').getContext('2d');
+                monthlyChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: '借阅数量',
+                            data: values,
+                            borderColor: '#36A2EB',
+                            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            }
+        })
+        .catch(error => {
+            console.error('加载月度借阅量趋势失败:', error);
+        });
+}
+
+// 导出报表
+function exportReport(reportType) {
+    const data = {
+        report_type: reportType,
+        format: 'csv'
+    };
+    
+    if (reportType === 'monthly_loans') {
+        const startDate = document.getElementById('monthlyLoansStartDate').value;
+        const endDate = document.getElementById('monthlyLoansEndDate').value;
+        
+        if (!startDate || !endDate) {
+            alert('请选择开始日期和结束日期');
+            return;
+        }
+        
+        data.start_date = startDate;
+        data.end_date = endDate;
+    } else if (reportType === 'inventory') {
+        const category = document.getElementById('inventoryCategory').value;
+        const status = document.getElementById('inventoryStatus').value;
+        
+        data.filters = {
+            category: category,
+            status: status
+        };
+    }
+    
+    fetch('/api/dashboard/export_report', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => {
+        if (response.ok) {
+            return response.blob();
+        } else {
+            return response.json().then(result => {
+                throw new Error(result.message || '导出失败');
+            });
+        }
+    })
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = data.report_type + '_report.csv';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        alert('导出成功');
+    })
+    .catch(error => {
+        console.error('导出报表失败:', error);
+        alert('导出失败: ' + error.message);
+    });
+}
+
+// 加载图书分类选项
+function loadCategories() {
+    fetch('/api/categories')
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                const select = document.getElementById('inventoryCategory');
+                result.categories.forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category.category;
+                    option.textContent = category.category;
+                    select.appendChild(option);
+                });
+            }
+        })
+        .catch(error => {
+            console.error('加载分类失败:', error);
+        });
+}
+
+// 页面加载时初始化
+document.addEventListener('DOMContentLoaded', function() {
+    loadDashboardStats();
+    loadCategoryDistribution();
+    loadUserDistribution();
+    loadMonthlyLoans();
+    loadCategories();
+    
+    // 设置默认日期范围（最近30天）
+    const today = new Date();
+    const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+    
+    document.getElementById('monthlyLoansEndDate').value = today.toISOString().split('T')[0];
+    document.getElementById('monthlyLoansStartDate').value = thirtyDaysAgo.toISOString().split('T')[0];
+});
+</script>
+{% endblock %}

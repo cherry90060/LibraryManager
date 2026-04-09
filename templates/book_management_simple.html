@@ -1,0 +1,526 @@
+{% extends "base_simple.html" %}
+
+{% block title %}图书管理 - 图书馆管理系统{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="text-center">
+                图书管理
+            </h1>
+        </div>
+    </div>
+
+    <!-- 筛选条件 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-filter"></i> 筛选条件
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="GET" action="{{ url_for('book_management') }}" class="row g-3 align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label">搜索</label>
+                            <input type="text" class="form-control" name="search" value="{{ search }}" placeholder="书名/作者/ISBN">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">分类</label>
+                            <select class="form-select" name="category">
+                                <option value="">全部分类</option>
+                                {% for cat in categories %}
+                                <option value="{{ cat.category }}" {% if category == cat.category %}selected{% endif %}>
+                                    {{ cat.category }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">状态</label>
+                            <select class="form-select" name="status">
+                                <option value="">全部状态</option>
+                                <option value="正常" {% if status == '正常' %}selected{% endif %}>正常</option>
+                                <option value="已下架" {% if status == '已下架' %}selected{% endif %}>已下架</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">库存状态</label>
+                            <select class="form-select" name="stock_status">
+                                <option value="">全部库存</option>
+                                <option value="充足" {% if stock_status == '充足' %}selected{% endif %}>充足</option>
+                                <option value="不足" {% if stock_status == '不足' %}selected{% endif %}>不足</option>
+                                <option value="无库存" {% if stock_status == '无库存' %}selected{% endif %}>无库存</option>
+                            </select>
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label">排序方式</label>
+                            <select class="form-select" name="sort_by">
+                                <option value="title" {% if sort_by == 'title' %}selected{% endif %}>书名</option>
+                                <option value="publish_date" {% if sort_by == 'publish_date' %}selected{% endif %}>出版日期</option>
+                                <option value="total_copies" {% if sort_by == 'total_copies' %}selected{% endif %}>总库存</option>
+                            </select>
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label">排序顺序</label>
+                            <select class="form-select" name="sort_order">
+                                <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>升序</option>
+                                <option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>降序</option>
+                            </select>
+                        </div>
+                        <div class="col-md-1">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-search"></i> 筛选
+                            </button>
+                        </div>
+                        <div class="col-md-1">
+                            <a href="{{ url_for('book_management') }}" class="btn btn-outline-secondary w-100">
+                                <i class="bi bi-x-circle"></i> 重置
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 图书列表 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-list"></i> 图书列表
+                    </h5>
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addBookModal">
+                        <i class="bi bi-plus-circle"></i> 添加图书
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ISBN</th>
+                                    <th style="min-width: 200px;">书名</th>
+                                    <th>作者</th>
+                                    <th>分类</th>
+                                    <th>出版社</th>
+                                    <th>封面</th>
+                                    <th>总库存</th>
+                                    <th>可借数量</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for book in books %}
+                                <tr>
+                                    <td>{{ book.isbn }}</td>
+                                    <td>{{ book.title }}</td>
+                                    <td>{{ book.author }}</td>
+                                    <td>{{ book.category or '未分类' }}</td>
+                                    <td>{{ book.publisher or '未知' }}</td>
+                                    <td>
+                                        {% if book.cover_image %}
+                                        <img src="{{ url_for('static', filename=book.cover_image) }}" alt="{{ book.title }} 封面" style="width: 50px; height: 70px; object-fit: cover;">
+                                        {% else %}
+                                        无
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ book.total_copies }}</td>
+                                    <td>{{ book.available_copies }}</td>
+                                    <td>
+                                        <span class="badge {% if book.status == '可借阅' %}bg-success{% else %}bg-warning{% endif %}">
+                                            {{ book.status }}
+                                        </span>
+                                    </td>
+                                    <td style="vertical-align: middle; white-space: nowrap;">
+                                        <div style="display: inline-flex; gap: 10px;">
+                                            <button type="button" class="btn btn-sm btn-primary" onclick="editBook({{ book.id }})"><i class="bi bi-pencil"></i> 编辑</button>
+                                            <button type="button" class="btn btn-sm btn-danger ms-1" onclick="deleteBook({{ book.id }}, '{{ book.title }}')"><i class="bi bi-trash"></i> 删除</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="10" class="text-center">暂无图书数据</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <!-- 分页 -->
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <p class="mb-0">共 {{ total }} 条记录</p>
+                        <nav>
+                            <ul class="pagination mb-0">
+                                {% if page > 1 %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('book_management', page=page-1, search=search, category=category, status=status, stock_status=stock_status, sort_by=sort_by, sort_order=sort_order) }}">
+                                        上一页
+                                    </a>
+                                </li>
+                                {% endif %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ page }}/{{ total_pages }}</span>
+                                </li>
+                                {% if page < total_pages %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('book_management', page=page+1, search=search, category=category, status=status, stock_status=stock_status, sort_by=sort_by, sort_order=sort_order) }}">
+                                        下一页
+                                    </a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 添加图书模态框 -->
+<div class="modal fade" id="addBookModal" tabindex="-1" aria-labelledby="addBookModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addBookModalLabel">
+                    <i class="bi bi-plus-circle"></i> 添加图书
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addBookForm" method="POST" action="{{ url_for('create_book') }}" enctype="multipart/form-data">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">ISBN <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="isbn" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">书名 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="title" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">作者 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="author" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">分类 <span class="text-danger">*</span></label>
+                            <select class="form-select" name="category" required>
+                                <option value="">请选择分类</option>
+                                {% for cat in categories %}
+                                <option value="{{ cat.category }}">{{ cat.category }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">出版社</label>
+                            <input type="text" class="form-control" name="publisher">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">出版日期</label>
+                            <input type="date" class="form-control" name="publish_date">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">总库存 <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" name="total_copies" min="0" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">状态 <span class="text-danger">*</span></label>
+                            <select class="form-select" name="status" required>
+                                <option value="可借阅">可借阅</option>
+                                <option value="已下架">已下架</option>
+                            </select>
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label">封面</label>
+                            <div class="mb-2" id="cover_preview_container" style="display: flex; align-items: center;">
+                                <div id="cover_preview" style="margin-right: 10px;">
+                                    <!-- 封面预览将在这里显示 -->
+                                </div>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="fetchCover()">
+                                    <i class="bi bi-cloud-download"></i> 自动获取
+                                </button>
+                            </div>
+                            <input type="hidden" name="cover_image" id="add_cover_image">
+                            <input type="file" class="form-control" name="cover_image_file" accept="image/*">
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label">简介</label>
+                            <textarea class="form-control" name="description" rows="3"></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="submit" form="addBookForm" class="btn btn-primary">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 编辑图书模态框 -->
+<div class="modal fade" id="editBookModal" tabindex="-1" aria-labelledby="editBookModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editBookModalLabel">
+                    <i class="bi bi-pencil"></i> 编辑图书
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editBookForm" method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="id" id="edit_id">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">ISBN <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="isbn" id="edit_isbn" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">书名 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="title" id="edit_title" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">作者 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="author" id="edit_author" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">分类 <span class="text-danger">*</span></label>
+                            <select class="form-select" name="category" id="edit_category" required>
+                                <option value="">请选择分类</option>
+                                {% for cat in categories %}
+                                <option value="{{ cat.category }}">{{ cat.category }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">出版社</label>
+                            <input type="text" class="form-control" name="publisher" id="edit_publisher">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">出版日期</label>
+                            <input type="date" class="form-control" name="publish_date" id="edit_publish_date">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">总库存 <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" name="total_copies" id="edit_total_copies" min="0" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">状态 <span class="text-danger">*</span></label>
+                            <select class="form-select" name="status" id="edit_status" required>
+                                <option value="可借阅">可借阅</option>
+                                <option value="已下架">已下架</option>
+                            </select>
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label">封面</label>
+                            <div class="mb-2" id="edit_cover_preview_container" style="display: flex; align-items: center;">
+                                <div id="edit_cover_preview" style="margin-right: 10px;">
+                                    <!-- 编辑时封面预览 -->
+                                </div>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="fetchCover(true)">
+                                    <i class="bi bi-cloud-download"></i> 自动获取
+                                </button>
+                            </div>
+                            <input type="hidden" name="cover_image" id="edit_cover_image">
+                            <input type="file" class="form-control" name="cover_image_file" accept="image/*">
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label">简介</label>
+                            <textarea class="form-control" name="description" id="edit_description" rows="3"></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="submit" form="editBookForm" class="btn btn-primary">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 编辑图书
+function editBook(bookId) {
+    fetch(`/api/book/${bookId}`)
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            const book = result.book;
+            document.getElementById('edit_id').value = book.id;
+            document.getElementById('edit_isbn').value = book.isbn;
+            document.getElementById('edit_title').value = book.title;
+            document.getElementById('edit_author').value = book.author;
+            document.getElementById('edit_category').value = book.category;
+            document.getElementById('edit_publisher').value = book.publisher || '';
+            document.getElementById('edit_publish_date').value = book.publish_date ? book.publish_date.substring(0, 10) : '';
+            document.getElementById('edit_total_copies').value = book.total_copies;
+            document.getElementById('edit_status').value = book.status;
+            document.getElementById('edit_description').value = book.description || '';
+            
+            // 显示封面预览
+            const coverPreview = document.getElementById('edit_cover_preview');
+            if (book.cover_image) {
+                coverPreview.innerHTML = `<img src="/static/${book.cover_image}?v=${Math.random()}" alt="${book.title} 封面" style="width: 80px; height: 110px; object-fit: cover;">`;
+                document.getElementById('edit_cover_image').value = book.cover_image;
+            } else {
+                coverPreview.innerHTML = '<span>无</span>';
+                document.getElementById('edit_cover_image').value = '';
+            }
+            
+            const editModal = new bootstrap.Modal(document.getElementById('editBookModal'));
+            editModal.show();
+        } else {
+            alert('获取图书信息失败');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('获取图书信息失败');
+    });
+}
+
+// 提交编辑表单
+document.getElementById('editBookForm')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const bookId = document.getElementById('edit_id').value;
+    const form = this;
+    
+    fetch(`/book/${bookId}/edit`, {
+        method: 'POST',
+        body: new FormData(form),
+        headers: {
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            alert('编辑成功');
+            location.reload();
+        } else {
+            alert('编辑失败: ' + result.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('编辑失败');
+    });
+});
+
+// 删除图书
+function deleteBook(bookId, bookTitle) {
+    if (!confirm(`确定要删除《${bookTitle}》这本书吗？`)) {
+        return;
+    }
+    
+    fetch(`/book/${bookId}/delete`, {
+        method: 'POST',
+        headers: {
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            alert('删除成功');
+            location.reload();
+        } else {
+            alert('删除失败: ' + result.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('删除失败');
+    });
+}
+
+// 添加图书
+
+// 预览封面
+function previewCover(path, isEdit=false) {
+    const previewId = isEdit ? 'edit_cover_preview' : 'cover_preview';
+    const previewElem = document.getElementById(previewId);
+    if (!previewElem) return;
+    previewElem.innerHTML = `<img src="/static/${path}?v=${Math.random()}" alt="封面" style="width: 80px; height: 110px; object-fit: cover;">`;
+}
+
+// 自动获取封面
+function fetchCover(isEdit=false) {
+    const formSelector = isEdit ? '#editBookForm' : '#addBookForm';
+    const form = document.querySelector(formSelector);
+    if (!form) return;
+    const title = form.querySelector('[name="title"]').value;
+    const isbn = form.querySelector('[name="isbn"]').value;
+    if (!title && !isbn) {
+        alert('请输入书名或ISBN');
+        return;
+    }
+    let url = '/api/book/cover?refresh=true';
+    if (isbn) url += '&isbn=' + encodeURIComponent(isbn);
+    if (title) url += '&book_name=' + encodeURIComponent(title);
+    fetch(url)
+        .then(r => r.json())
+        .then(result => {
+            if (result.success) {
+                const coverPath = result.cover_local_path || '';
+                const hiddenInputId = isEdit ? 'edit_cover_image' : 'add_cover_image';
+                if (coverPath) {
+                    document.getElementById(hiddenInputId).value = coverPath;
+                    previewCover(coverPath, isEdit);
+                } else if (result.cover_url) {
+                    document.getElementById(hiddenInputId).value = '';
+                    const previewId = isEdit ? 'edit_cover_preview' : 'cover_preview';
+                    document.getElementById(previewId).innerHTML = `<img src="${result.cover_url}" style="width: 80px; height: 110px; object-fit: cover;">`;
+                }
+            } else {
+                alert('获取封面失败: ' + result.error);
+            }
+        })
+        .catch(e => {
+            console.error(e);
+            alert('获取封面出错');
+        });
+}
+
+// 添加图书
+document.getElementById('addBookForm')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const form = this;
+    
+    fetch('/book/create', {
+        method: 'POST',
+        body: new FormData(form),
+        headers: {
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            alert('添加成功');
+            location.reload();
+        } else {
+            alert('添加失败: ' + result.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('添加失败');
+    });
+});
+
+// 删除图书不需要修改，因为已经使用了正确的表单提交方式
+</script>
+{% endblock %}

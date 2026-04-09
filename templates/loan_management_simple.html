@@ -1,0 +1,598 @@
+{% extends "base_simple.html" %}
+
+{% block title %}借阅管理 - 图书馆管理系统{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="text-center">
+                <i class="bi bi-exchange"></i> 借阅管理
+            </h1>
+        </div>
+    </div>
+
+    <!-- 筛选条件 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-filter"></i> 筛选条件
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="GET" action="{{ url_for('loan_management') }}" class="row g-3 align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label">搜索</label>
+                            <input type="text" class="form-control" name="search" value="{{ search }}" placeholder="用户名/书名/借阅ID">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">归还状态</label>
+                            <select class="form-select" name="return_status">
+                                <option value="">全部状态</option>
+                                <option value="returned" {% if return_status == 'returned' %}selected{% endif %}>已归还</option>
+                                <option value="not_returned" {% if return_status == 'not_returned' %}selected{% endif %}>未归还</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">逾期状态</label>
+                            <select class="form-select" name="overdue_status">
+                                <option value="">全部状态</option>
+                                <option value="overdue" {% if overdue_status == 'overdue' %}selected{% endif %}>已逾期</option>
+                                <option value="normal" {% if overdue_status == 'normal' %}selected{% endif %}>正常</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">借阅开始日期</label>
+                            <input type="date" class="form-control" name="start_date" value="{{ start_date }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">借阅结束日期</label>
+                            <input type="date" class="form-control" name="end_date" value="{{ end_date }}">
+                        </div>
+                        <div class="col-md-1">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-search"></i> 筛选
+                            </button>
+                        </div>
+                        <div class="col-md-1">
+                            <a href="{{ url_for('loan_management') }}" class="btn btn-outline-secondary w-100">
+                                <i class="bi bi-x-circle"></i> 重置
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 借阅记录和请求管理选项卡 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <ul class="nav nav-tabs card-header-tabs" id="loanTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="loans-tab" data-bs-toggle="tab" data-bs-target="#loans" type="button" role="tab" aria-controls="loans" aria-selected="true">
+                                <i class="bi bi-list"></i> 借阅记录
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="requests-tab" data-bs-toggle="tab" data-bs-target="#requests" type="button" role="tab" aria-controls="requests" aria-selected="false">
+                                <i class="bi bi-hourglass"></i> 借阅请求
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-body">
+                    <div class="tab-content" id="loanTabsContent">
+                        <!-- 借阅记录选项卡 -->
+                        <div class="tab-pane fade show active" id="loans" role="tabpanel" aria-labelledby="loans-tab">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h6 class="mb-0">所有借阅记录</h6>
+                                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createLoanModal">
+                                    <i class="bi bi-plus-circle"></i> 办理借阅
+                                </button>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>借阅ID</th>
+                                            <th>用户名</th>
+                                            <th style="min-width: 200px;">书名</th>
+                                            <th>借阅日期</th>
+                                            <th>应还日期</th>
+                                            <th>归还日期</th>
+                                            <th>状态</th>
+                                            <th>逾期天数</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for loan in loans %}
+                                        <tr>
+                                            <td>{{ loan.id }}</td>
+                                            <td>{{ loan.username }}</td>
+                                            <td>{{ loan.title }}</td>
+                                            <td>{{ loan.loan_date[:19] }}</td>
+                                            <td>{{ loan.due_date[:19] }}</td>
+                                            <td>{{ loan.return_date[:19] if loan.return_date else '未归还' }}</td>
+                                            <td>
+                                                <span class="badge {% if loan.is_returned %}bg-success{% else %}{% if loan.is_overdue %}bg-danger{% else %}bg-warning{% endif %}{% endif %}">
+                                                    {{ loan.return_status }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {% if loan.is_overdue %}
+                                                <span class="text-danger">{{ loan.overdue_days }}</span>
+                                                {% else %}
+                                                {{ loan.overdue_days }}
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if not loan.is_returned %}
+                                                <button type="button" class="btn btn-sm btn-primary" onclick="returnLoan({{ loan.id }})"><i class="bi bi-check-circle"></i> 办理归还</button>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% else %}
+                                        <tr>
+                                            <td colspan="9" class="text-center">暂无借阅记录</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <!-- 借阅记录分页 -->
+                            <div class="mt-4">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <p class="mb-0">共 {{ total }} 条记录</p>
+                                    <nav>
+                                        <ul class="pagination mb-0">
+                                            {% if page > 1 %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="{{ url_for('loan_management', page=page-1, search=search, return_status=return_status, overdue_status=overdue_status, start_date=start_date, end_date=end_date) }}">
+                                                    上一页
+                                                </a>
+                                            </li>
+                                            {% endif %}
+                                            <li class="page-item active">
+                                                <span class="page-link">{{ page }}/{{ total_pages }}</span>
+                                            </li>
+                                            {% if page < total_pages %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="{{ url_for('loan_management', page=page+1, search=search, return_status=return_status, overdue_status=overdue_status, start_date=start_date, end_date=end_date) }}">
+                                                    下一页
+                                                </a>
+                                            </li>
+                                            {% endif %}
+                                        </ul>
+                                    </nav>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 借阅请求选项卡 -->
+                        <div class="tab-pane fade" id="requests" role="tabpanel" aria-labelledby="requests-tab">
+                            <h6 class="mb-4">待处理的借阅请求</h6>
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>编号</th>
+                                            <th>用户</th>
+                                            <th>图书</th>
+                                            <th>申请时间</th>
+                                            <th>状态</th>
+                                            <th>取货码</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for request in requests %}
+                                        <tr>
+                                            <td>{{ request.id }}</td>
+                                            <td>{{ request.username }}</td>
+                                            <td>{{ request.title }}</td>
+                                            <td>{{ request.request_date[:19] }}</td>
+                                            <td>
+                                                {% if request.status == 'pending' %}
+                                                <span class="badge bg-warning">待审批</span>
+                                                {% elif request.status == 'approved' %}
+                                                <span class="badge bg-success">已批准</span>
+                                                {% elif request.status == 'rejected' %}
+                                                <span class="badge bg-danger">已拒绝</span>
+                                                {% elif request.status == 'expired' %}
+                                                <span class="badge bg-secondary">已失效</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if request.pickup_code %}
+                                                    <span class="font-weight-bold text-primary">{{ request.pickup_code }}</span>
+                                                    {% if request.pickup_confirmed %}
+                                                    <span class="badge bg-success ms-2">已取货</span>
+                                                    {% endif %}
+                                                {% else %}
+                                                    {% if request.status == 'approved' %}
+                                                    <span class="text-muted">生成中...</span>
+                                                    {% else %}
+                                                    <span class="text-muted">-</span>
+                                                    {% endif %}
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if request.status == 'pending' %}
+                                                <!-- 批准按钮 -->
+                                                <form action="{{ url_for('approve_loan_request', request_id=request.id) }}" method="post" class="d-inline">
+                                                    <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('确定要批准这个借阅请求吗？');"><i class="bi bi-check-circle"></i> 批准</button>
+                                                </form>
+                                                
+                                                <!-- 拒绝按钮 -->
+                                                <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#rejectModal{{ request.id }}"><i class="bi bi-x-circle"></i> 拒绝</button>
+                                                {% elif request.status == 'approved' and request.pickup_code and not request.pickup_confirmed %}
+                                                <!-- 确认取货按钮 -->
+                                                <form action="{{ url_for('confirm_pickup', request_id=request.id) }}" method="post" class="d-inline">
+                                                    <button type="submit" class="btn btn-primary btn-sm" onclick="return confirm('确定要确认用户取货吗？');"><i class="bi bi-check-circle"></i> 确认取货</button>
+                                                </form>
+                                                {% elif request.status == 'approved' and request.pickup_confirmed %}
+                                                <span class="text-muted">已取货</span>
+                                                {% elif request.status == 'expired' %}
+                                                <span class="text-muted text-danger">已失效</span>
+                                                {% elif request.status == 'rejected' %}
+                                                <span class="text-muted">已拒绝</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        
+                                        <!-- 拒绝原因模态框 -->
+                                        <div class="modal fade" id="rejectModal{{ request.id }}" tabindex="-1" aria-labelledby="rejectModalLabel{{ request.id }}" aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title" id="rejectModalLabel{{ request.id }}"><i class="bi bi-x-circle"></i> 拒绝借阅请求</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <form action="{{ url_for('reject_loan_request', request_id=request.id) }}" method="post">
+                                                            <div class="mb-3">
+                                                                <label class="form-label">拒绝原因</label>
+                                                                <textarea class="form-control" name="reject_reason" rows="3" placeholder="请输入拒绝原因"></textarea>
+                                                            </div>
+                                                            <button type="submit" class="btn btn-danger" onclick="return confirm('确定要拒绝这个借阅请求吗？');">
+                                                                <i class="bi bi-x-circle"></i> 确认拒绝
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                        {% if not requests %}
+                                        <tr>
+                                            <td colspan="7" class="text-center">暂无借阅请求</td>
+                                        </tr>
+                                        {% endif %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 办理借阅模态框 -->
+<div class="modal fade" id="createLoanModal" tabindex="-1" aria-labelledby="createLoanModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createLoanModalLabel">
+                    <i class="bi bi-plus-circle"></i> 办理借阅
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createLoanForm" method="POST" action="{{ url_for('create_loan') }}">
+                    <div class="mb-3">
+                        <label class="form-label">读者ID <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" name="user_id" required placeholder="输入读者ID">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">图书ID <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" name="book_id" required placeholder="输入图书ID">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">应还日期</label>
+                        <input type="date" class="form-control" name="due_date">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="submit" form="createLoanForm" class="btn btn-primary">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 办理归还模态框 -->
+<div class="modal fade" id="returnLoanModal" tabindex="-1" aria-labelledby="returnLoanModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="returnLoanModalLabel">
+                    <i class="bi bi-check-circle"></i> 办理归还
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="returnLoanForm" method="POST" action="{{ url_for('return_loan') }}">
+                    <input type="hidden" name="loan_id" id="return_loan_id">
+                    <div class="alert alert-info" role="alert">
+                        请确认归还信息
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="submit" form="returnLoanForm" class="btn btn-primary">确认归还</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- 批准借阅请求模态框 -->
+<div class="modal fade" id="approveRequestModal" tabindex="-1" aria-labelledby="approveRequestModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="approveRequestModalLabel">批准借阅请求</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+      </div>
+      <div class="modal-body">
+        <p>确定要批准这个借阅请求吗？</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        <button type="button" class="btn btn-success" id="confirmApproveBtn">确定批准</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 确认取货模态框 -->
+<div class="modal fade" id="confirmPickupModal" tabindex="-1" aria-labelledby="confirmPickupModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="confirmPickupModalLabel">确认取货</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+      </div>
+      <div class="modal-body">
+        <p>确定要确认用户取货吗？</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        <button type="button" class="btn btn-primary" id="confirmPickupBtn">确定确认</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 拒绝借阅请求模态框 -->
+<div class="modal fade" id="confirmRejectModal" tabindex="-1" aria-labelledby="confirmRejectModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="confirmRejectModalLabel">拒绝借阅请求</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+      </div>
+      <div class="modal-body">
+        <p>确定要拒绝这个借阅请求吗？</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        <button type="button" class="btn btn-danger" id="confirmRejectBtn">确定拒绝</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 办理归还
+function returnLoan(loanId) {
+    document.getElementById('return_loan_id').value = loanId;
+    const returnModal = new bootstrap.Modal(document.getElementById('returnLoanModal'));
+    returnModal.show();
+}
+
+// 批准借阅请求模态框处理
+let currentApproveForm = null;
+
+document.querySelectorAll('button[onclick*="confirm(\'确定要批准这个借阅请求吗？\')"]').forEach(button => {
+  button.setAttribute('data-bs-toggle', 'modal');
+  button.setAttribute('data-bs-target', '#approveRequestModal');
+  button.removeAttribute('onclick');
+  button.addEventListener('click', function() {
+    currentApproveForm = this.closest('form');
+  });
+});
+
+document.getElementById('confirmApproveBtn').addEventListener('click', function() {
+  if (currentApproveForm) {
+    currentApproveForm.submit();
+  }
+});
+
+// 确认取货模态框处理
+let currentPickupForm = null;
+
+document.querySelectorAll('button[onclick*="confirm(\'确定要确认用户取货吗？\')"]').forEach(button => {
+  button.setAttribute('data-bs-toggle', 'modal');
+  button.setAttribute('data-bs-target', '#confirmPickupModal');
+  button.removeAttribute('onclick');
+  button.addEventListener('click', function() {
+    currentPickupForm = this.closest('form');
+  });
+});
+
+document.getElementById('confirmPickupBtn').addEventListener('click', function() {
+  if (currentPickupForm) {
+    currentPickupForm.submit();
+  }
+});
+
+// 拒绝借阅请求模态框处理
+let currentRejectForm = null;
+
+document.querySelectorAll('button[onclick*="confirm(\'确定要拒绝这个借阅请求吗？\')"]').forEach(button => {
+  button.setAttribute('data-bs-toggle', 'modal');
+  button.setAttribute('data-bs-target', '#confirmRejectModal');
+  button.removeAttribute('onclick');
+  button.addEventListener('click', function() {
+    currentRejectForm = this.closest('form');
+  });
+});
+
+document.getElementById('confirmRejectBtn').addEventListener('click', function() {
+  if (currentRejectForm) {
+    currentRejectForm.submit();
+  }
+});
+
+// 表单提交处理
+document.getElementById('createLoanForm')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const form = this;
+    
+    fetch(form.action, {
+        method: 'POST',
+        body: new FormData(form)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            // 使用Bootstrap Toast或其他美化方式替代alert
+            const toastEl = document.createElement('div');
+            toastEl.className = 'toast position-fixed top-0 end-0 m-3 bg-success text-white';
+            toastEl.setAttribute('role', 'alert');
+            toastEl.setAttribute('aria-live', 'assertive');
+            toastEl.setAttribute('aria-atomic', 'true');
+            toastEl.innerHTML = `
+                <div class="toast-body">
+                    借阅成功
+                </div>
+            `;
+            document.body.appendChild(toastEl);
+            const toast = new bootstrap.Toast(toastEl);
+            toast.show();
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            // 使用Bootstrap Toast或其他美化方式替代alert
+            const toastEl = document.createElement('div');
+            toastEl.className = 'toast position-fixed top-0 end-0 m-3 bg-danger text-white';
+            toastEl.setAttribute('role', 'alert');
+            toastEl.setAttribute('aria-live', 'assertive');
+            toastEl.setAttribute('aria-atomic', 'true');
+            toastEl.innerHTML = `
+                <div class="toast-body">
+                    借阅失败: ${result.message}
+                </div>
+            `;
+            document.body.appendChild(toastEl);
+            const toast = new bootstrap.Toast(toastEl);
+            toast.show();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        // 使用Bootstrap Toast或其他美化方式替代alert
+        const toastEl = document.createElement('div');
+        toastEl.className = 'toast position-fixed top-0 end-0 m-3 bg-danger text-white';
+        toastEl.setAttribute('role', 'alert');
+        toastEl.setAttribute('aria-live', 'assertive');
+        toastEl.setAttribute('aria-atomic', 'true');
+        toastEl.innerHTML = `
+            <div class="toast-body">
+                借阅失败
+            </div>
+        `;
+        document.body.appendChild(toastEl);
+        const toast = new bootstrap.Toast(toastEl);
+        toast.show();
+    });
+});
+
+document.getElementById('returnLoanForm')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const form = this;
+    
+    fetch(form.action, {
+        method: 'POST',
+        body: new FormData(form)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            // 使用Bootstrap Toast或其他美化方式替代alert
+            const toastEl = document.createElement('div');
+            toastEl.className = 'toast position-fixed top-0 end-0 m-3 bg-success text-white';
+            toastEl.setAttribute('role', 'alert');
+            toastEl.setAttribute('aria-live', 'assertive');
+            toastEl.setAttribute('aria-atomic', 'true');
+            toastEl.innerHTML = `
+                <div class="toast-body">
+                    归还成功
+                </div>
+            `;
+            document.body.appendChild(toastEl);
+            const toast = new bootstrap.Toast(toastEl);
+            toast.show();
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            // 使用Bootstrap Toast或其他美化方式替代alert
+            const toastEl = document.createElement('div');
+            toastEl.className = 'toast position-fixed top-0 end-0 m-3 bg-danger text-white';
+            toastEl.setAttribute('role', 'alert');
+            toastEl.setAttribute('aria-live', 'assertive');
+            toastEl.setAttribute('aria-atomic', 'true');
+            toastEl.innerHTML = `
+                <div class="toast-body">
+                    归还失败: ${result.message}
+                </div>
+            `;
+            document.body.appendChild(toastEl);
+            const toast = new bootstrap.Toast(toastEl);
+            toast.show();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        // 使用Bootstrap Toast或其他美化方式替代alert
+        const toastEl = document.createElement('div');
+        toastEl.className = 'toast position-fixed top-0 end-0 m-3 bg-danger text-white';
+        toastEl.setAttribute('role', 'alert');
+        toastEl.setAttribute('aria-live', 'assertive');
+        toastEl.setAttribute('aria-atomic', 'true');
+        toastEl.innerHTML = `
+            <div class="toast-body">
+                归还失败
+            </div>
+        `;
+        document.body.appendChild(toastEl);
+        const toast = new bootstrap.Toast(toastEl);
+        toast.show();
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,83 @@
+{% extends "base_simple.html" %}
+
+{% block title %}编辑读者 - 图书馆管理系统{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card mt-5">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-pencil"></i> 编辑读者
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('edit_reader', reader_id=reader.id) }}">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">用户名</label>
+                                <input type="text" class="form-control" value="{{ reader.username }}" disabled>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">密码 (留空表示不修改)</label>
+                                <input type="password" class="form-control" name="password" minlength="6">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">姓名</label>
+                                <input type="text" class="form-control" name="name" value="{{ reader.name or '' }}">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">邮箱</label>
+                                <input type="email" class="form-control" name="email" value="{{ reader.email }}">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">性别</label>
+                                <select class="form-select" name="gender">
+                                    <option value="" {% if not reader.gender %}selected{% endif %}>请选择</option>
+                                    <option value="男" {% if reader.gender == '男' %}selected{% endif %}>男</option>
+                                    <option value="女" {% if reader.gender == '女' %}selected{% endif %}>女</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">电话</label>
+                                <input type="text" class="form-control" name="phone" value="{{ reader.phone or '' }}">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">身份证号</label>
+                                <input type="text" class="form-control" name="id_card" value="{{ reader.id_card or '' }}">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">用户类型</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="is_admin" id="is_admin" {% if reader.is_admin %}checked{% endif %}>
+                                    <label class="form-check-label" for="is_admin">
+                                        管理员
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">状态</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="is_active" id="is_active" {% if reader.is_active %}checked{% endif %}>
+                                    <label class="form-check-label" for="is_active">
+                                        启用
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i> 保存
+                            </button>
+                            <a href="{{ url_for('readers') }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> 返回
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,235 @@
+{% extends "base_simple.html" %}
+
+{% block title %}{{ book.title }} - 图书详情{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- 面包屑导航 -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('index') }}">首页</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('books') }}">图书浏览</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ book.title }}</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <!-- 图书信息 -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0">
+                        <i class="bi bi-book"></i> 图书详情
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                {% if book.cover_image %}
+                                <img src="{{ url_for('static', filename=book.cover_image) }}" alt="{{ book.title }} 封面" style="max-width: 100%; height: auto; max-height: 300px; object-fit: cover;">
+                                {% else %}
+                                <i class="bi bi-book" style="font-size: 8rem; opacity: 0.3;"></i>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <h2 class="mb-3">{{ book.title }}</h2>
+                            
+                            <table class="table table-borderless">
+                                <tbody>
+                                    <tr>
+                                        <td><strong>作者：</strong></td>
+                                        <td>{{ book.author }}</td>
+                                    </tr>
+                                    {% if book.isbn %}
+                                    <tr>
+                                        <td><strong>ISBN：</strong></td>
+                                        <td>{{ book.isbn }}</td>
+                                    </tr>
+                                    {% endif %}
+                                    <tr>
+                                        <td><strong>分类：</strong></td>
+                                        <td>
+                                            <span class="badge bg-secondary">{{ book.category or '未分类' }}</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>库存状态：</strong></td>
+                                        <td>
+                                            <span class="badge {% if book.available_copies > 0 %}bg-success{% else %}bg-danger{% endif %}">
+                                                <i class="bi bi-{% if book.available_copies > 0 %}check-circle{% else %}x-circle{% endif %}"></i>
+                                                {{ book.available_copies }}/{{ book.total_copies }} 可借
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>添加时间：</strong></td>
+                                        <td>{{ book.created_at[:10] }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div>
+                        <h5>内容简介</h5>
+                        <p class="text-muted">
+                            {{ book.description or '暂无简介' }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 操作面板 -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-gear"></i> 借阅操作
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if not session.user_id %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i>
+                            请先登录才能借阅图书
+                        </div>
+                        <a href="{{ url_for('login', next=request.path) }}" class="btn btn-primary w-100">
+                            <i class="bi bi-box-arrow-in-right"></i> 立即登录
+                        </a>
+                    {% elif book.available_copies <= 0 %}
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            该图书暂无库存
+                        </div>
+                        <button class="btn btn-secondary w-100" disabled>
+                            <i class="bi bi-x-circle"></i> 无法借阅
+                        </button>
+                    {% else %}
+                        <form method="POST" action="{{ url_for('borrow_book', book_id=book.id) }}">
+                            <div class="alert alert-success">
+                                <i class="bi bi-check-circle"></i>
+                                图书可借阅
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-success btn-lg">
+                                    <i class="bi bi-plus-circle"></i> 立即借阅
+                                </button>
+                            </div>
+                        </form>
+                        
+                        <hr>
+                        
+                        <div class="text-muted">
+                            <small>
+                                <i class="bi bi-info-circle"></i>
+                                借阅期限：14天<br>
+                                <i class="bi bi-info-circle"></i>
+                                逾期费用：每天0.5元
+                            </small>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- 借阅统计 -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-graph-up"></i> 借阅统计
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <h4 class="text-primary">{{ book.total_copies }}</h4>
+                            <small class="text-muted">总库存</small>
+                        </div>
+                        <div class="col-6">
+                            <h4 class="text-success">{{ book.available_copies }}</h4>
+                            <small class="text-muted">可借数量</small>
+                        </div>
+                    </div>
+                    
+                    {% if book.available_copies == 0 %}
+                    <hr>
+                    <div class="alert alert-info">
+                        <i class="bi bi-clock"></i>
+                        <small>预计有图书在借阅完成后会归还</small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 借阅历史 -->
+    {% if loan_history %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-clock-history"></i> 借阅历史
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>借阅者</th>
+                                    <th>借阅日期</th>
+                                    <th>应还日期</th>
+                                    <th>归还日期</th>
+                                    <th>状态</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for loan in loan_history %}
+                                <tr>
+                                    <td>{{ loan.username }}</td>
+                                    <td>{{ loan.loan_date[:10] }}</td>
+                                    <td>{{ loan.due_date[:10] }}</td>
+                                    <td>
+                                        {% if loan.return_date %}
+                                            {{ loan.return_date[:10] }}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if loan.is_returned %}
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-check-circle"></i> 已归还
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-warning">
+                                                <i class="bi bi-clock"></i> 借阅中
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 返回按钮 -->
+    <div class="mt-4">
+        <a href="{{ url_for('books') }}" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left"></i> 返回图书列表
+        </a>
+    </div>
+</div>
+{% endblock %}

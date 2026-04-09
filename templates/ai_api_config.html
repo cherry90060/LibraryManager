@@ -1,0 +1,267 @@
+{% extends "base_simple.html" %}
+
+{% block title %}API配置管理 - 图书馆管理系统{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="text-center">
+                <i class="bi bi-gear"></i> API配置管理
+            </h1>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8 offset-lg-2">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-robot"></i> 添加API配置
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="apiConfigForm">
+                        <div class="mb-3">
+                            <label class="form-label">AI服务提供商</label>
+                            <select class="form-select" id="providerName" required>
+                                <option value="">请选择AI服务提供商</option>
+                                <option value="DeepSeek">DeepSeek</option>
+                                <option value="OpenAI">OpenAI (ChatGPT)</option>
+                                <option value="Claude">Claude (Anthropic)</option>
+                                <option value="通义千问">通义千问 (阿里云)</option>
+                                <option value="文心一言">文心一言 (百度)</option>
+                                <option value="智谱AI">智谱AI (清华)</option>
+                                <option value="月之暗面">月之暗面 (Kimi)</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">API地址</label>
+                            <input 
+                                type="text" 
+                                class="form-control" 
+                                id="apiEndpoint" 
+                                placeholder="请输入API地址"
+                                required
+                            >
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">API Key</label>
+                            <input 
+                                type="password" 
+                                class="form-control" 
+                                id="apiKey" 
+                                placeholder="请输入API Key"
+                                required
+                            >
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="isActive">
+                            <label class="form-check-label" for="isActive">
+                                设为默认API
+                            </label>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save"></i> 保存配置
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-list"></i> 已配置的API
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>服务提供商</th>
+                                    <th>API地址</th>
+                                    <th>状态</th>
+                                    <th>创建时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="apiConfigTable">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('providerName').addEventListener('change', function() {
+    const provider = this.value;
+    const apiEndpoint = document.getElementById('apiEndpoint');
+    
+    const endpoints = {
+        'DeepSeek': 'https://api.deepseek.com/v1/chat/completions',
+        'OpenAI': 'https://api.openai.com/v1/chat/completions',
+        'Claude': 'https://api.anthropic.com/v1/messages',
+        '通义千问': 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+        '文心一言': 'https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/completions',
+        '智谱AI': 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+        '月之暗面': 'https://api.moonshot.cn/v1/chat/completions'
+    };
+    
+    if (endpoints[provider]) {
+        apiEndpoint.value = endpoints[provider];
+    }
+});
+
+document.getElementById('apiConfigForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const providerName = document.getElementById('providerName').value;
+    const apiEndpoint = document.getElementById('apiEndpoint').value;
+    const apiKey = document.getElementById('apiKey').value;
+    const isActive = document.getElementById('isActive').checked ? 1 : 0;
+    
+    if (!providerName || !apiEndpoint || !apiKey) {
+        alert('请填写所有必填字段');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/ai_api_config', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                provider_name: providerName,
+                api_endpoint: apiEndpoint,
+                api_key: apiKey,
+                is_active: isActive
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('API配置保存成功');
+            document.getElementById('apiConfigForm').reset();
+            loadApiConfigs();
+        } else {
+            alert('保存失败: ' + result.message);
+        }
+    } catch (error) {
+        console.error('保存失败:', error);
+        alert('保存失败: ' + error.message);
+    }
+});
+
+async function loadApiConfigs() {
+    try {
+        const response = await fetch('/api/ai_api_config');
+        const result = await response.json();
+        
+        if (result.success) {
+            displayApiConfigs(result.configs);
+        }
+    } catch (error) {
+        console.error('加载配置失败:', error);
+    }
+}
+
+function displayApiConfigs(configs) {
+    const tableBody = document.getElementById('apiConfigTable');
+    tableBody.innerHTML = '';
+    
+    if (configs.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="5" class="text-center">暂无配置</td></tr>';
+        return;
+    }
+    
+    configs.forEach(config => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${config.provider_name}</td>
+            <td>${config.api_endpoint.substring(0, 50)}...</td>
+            <td>
+                ${config.is_active ? 
+                    '<span class="badge bg-success">默认</span>' : 
+                    '<span class="badge bg-secondary">未启用</span>'}
+            </td>
+            <td>${new Date(config.created_at).toLocaleString()}</td>
+            <td>
+                <button class="btn btn-sm btn-primary" onclick="setActive(${config.id})">
+                    <i class="bi bi-check"></i> 设为默认
+                </button>
+                <button class="btn btn-sm btn-danger" onclick="deleteConfig(${config.id})">
+                    <i class="bi bi-trash"></i> 删除
+                </button>
+            </td>
+        `;
+        tableBody.appendChild(row);
+    });
+}
+
+async function setActive(id) {
+    if (!confirm('确定要设为默认API吗？')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/ai_api_config/${id}/set_active`, {
+            method: 'POST'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('设置成功');
+            loadApiConfigs();
+        } else {
+            alert('设置失败: ' + result.message);
+        }
+    } catch (error) {
+        console.error('设置失败:', error);
+        alert('设置失败: ' + error.message);
+    }
+}
+
+async function deleteConfig(id) {
+    if (!confirm('确定要删除此配置吗？')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/ai_api_config/${id}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('删除成功');
+            loadApiConfigs();
+        } else {
+            alert('删除失败: ' + result.message);
+        }
+    } catch (error) {
+        console.error('删除失败:', error);
+        alert('删除失败: ' + error.message);
+    }
+}
+
+loadApiConfigs();
+</script>
+{% endblock %}

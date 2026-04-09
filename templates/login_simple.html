@@ -1,0 +1,100 @@
+{% extends "base_simple.html" %}
+
+{% block title %}登录 - 图书馆管理系统{% endblock %}
+
+{% block content %}
+<style>
+    body {
+        background-color: #f8f9fa;
+    }
+    
+    .card-header-custom {
+        background-color: #2c3e50 !important;
+        color: white !important;
+    }
+    
+    .card-header-custom i {
+        color: white !important;
+    }
+    
+    .card-header-custom h4 {
+        color: white !important;
+    }
+    
+    .btn-custom-primary {
+        background-color: #2c3e50;
+        border-color: #2c3e50;
+        color: white;
+    }
+    
+    .btn-custom-primary:hover {
+        background-color: #1a252f;
+        border-color: #1a252f;
+        color: white;
+    }
+    
+    .btn-custom-outline {
+        background-color: transparent;
+        border-color: #2c3e50;
+        color: #2c3e50;
+    }
+    
+    .btn-custom-outline:hover {
+        background-color: #2c3e50;
+        border-color: #2c3e50;
+        color: white;
+    }
+</style>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow-lg border-0 mt-5">
+                <div class="card-header card-header-custom text-center">
+                    <h4 class="mb-0">
+                        <i class="bi bi-box-arrow-in-right"></i> 用户登录
+                    </h4>
+                </div>
+                <div class="card-body p-4">
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">
+                                <i class="bi bi-person"></i> 用户名
+                            </label>
+                            <input type="text" class="form-control" id="username" name="username" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">
+                                <i class="bi bi-lock"></i> 密码
+                            </label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-custom-primary">
+                                <i class="bi bi-box-arrow-in-right"></i> 登录
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <hr>
+                    
+                    <div class="text-center">
+                        <p class="mb-2">还没有账户？</p>
+                        <a href="{{ url_for('register') }}" class="btn btn-custom-outline">
+                            <i class="bi bi-person-plus"></i> 立即注册
+                        </a>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="text-center">
+                        <h6>测试账户：</h6>
+                        <p class="mb-1"><strong>管理员：</strong> admin / admin123</p>
+                        <p class="mb-0"><strong>用户：</strong> 可以注册新账户</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

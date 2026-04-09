@@ -1,0 +1,178 @@
+{% extends "base_simple.html" %}
+
+{% block title %}读者管理 - 图书馆管理系统{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="text-center">
+                读者管理
+            </h1>
+        </div>
+    </div>
+
+    <!-- 筛选条件 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-filter"></i> 筛选条件
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="GET" action="{{ url_for('readers') }}" class="row g-3 align-items-end">
+                        <div class="col-md-8">
+                            <label class="form-label">搜索</label>
+                            <input type="text" class="form-control" name="search" value="{{ search }}" placeholder="用户名/姓名/电话">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">用户类型</label>
+                            <select class="form-select" name="reader_type">
+                                <option value="">全部类型</option>
+                                <option value="admin" {% if reader_type == 'admin' %}selected{% endif %}>管理员</option>
+                                <option value="user" {% if reader_type == 'user' %}selected{% endif %}>普通用户</option>
+                            </select>
+                        </div>
+                        <div class="col-md-1">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-search"></i> 筛选
+                            </button>
+                        </div>
+                        <div class="col-md-1">
+                            <a href="{{ url_for('readers') }}" class="btn btn-outline-secondary w-100">
+                                <i class="bi bi-x-circle"></i> 重置
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 读者列表 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-list"></i> 读者列表
+                    </h5>
+                    <a href="{{ url_for('add_reader') }}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> 添加读者
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover text-center" style="font-size: 15px;">
+                            <style>
+                                .table td,
+                                .table th {
+                                    vertical-align: middle !important;
+                                    padding: 15px !important;
+                                    display: table-cell;
+                                }
+                                .table tr {
+                                    height: 80px;
+                                }
+                                .badge {
+                                    vertical-align: middle !important;
+                                    display: inline-block;
+                                }
+                                .btn {
+                                    vertical-align: middle !important;
+                                    display: inline-block;
+                                }
+                            </style>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>用户名</th>
+                                    <th>姓名</th>
+                                    <th>邮箱</th>
+                                    <th>电话</th>
+                                    <th>类型</th>
+                                    <th>状态</th>
+                                    <th>当前借阅</th>
+                                    <th>逾期数量</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for reader in readers %}
+                                <tr>
+                                    <td>{{ reader.id }}</td>
+                                    <td>{{ reader.username }}</td>
+                                    <td>{{ reader.name or '未设置' }}</td>
+                                    <td>{{ reader.email }}</td>
+                                    <td>{{ reader.phone or '未设置' }}</td>
+                                    <td>
+                                        <span class="badge {% if reader.is_admin %}bg-danger{% else %}bg-primary{% endif %}" style="font-size: 14px; padding: 6px 12px;">
+                                            {% if reader.is_admin %}管理员{% else %}普通用户{% endif %}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if reader.is_active %}bg-success{% else %}bg-danger{% endif %}" style="font-size: 14px; padding: 6px 12px;">
+                                            {% if reader.is_active %}启用{% else %}禁用{% endif %}
+                                        </span>
+                                    </td>
+                                    <td>{{ reader.loan_count }}</td>
+                                    <td>{{ reader.overdue_count }}</td>
+                                    <td>
+                                        <a href="{{ url_for('edit_reader', reader_id=reader.id) }}" class="btn btn-sm btn-primary">
+                                            <i class="bi bi-pencil"></i> 编辑
+                                        </a>
+                                        <form method="POST" action="{{ url_for('toggle_reader_status', reader_id=reader.id) }}" style="display: inline;">
+                                            <button type="submit" class="btn btn-sm btn-warning ms-1">
+                                                <i class="bi bi-power"></i> {% if reader.is_active %}禁用{% else %}启用{% endif %}
+                                            </button>
+                                        </form>
+                                        <form method="POST" action="{{ url_for('delete_reader', reader_id=reader.id) }}" style="display: inline;" onsubmit="return confirm('确定要删除这个读者吗？');">
+                                            <button type="submit" class="btn btn-sm btn-danger ms-1">
+                                                <i class="bi bi-trash"></i> 删除
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="10" class="text-center">暂无读者数据</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <!-- 分页 -->
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <p class="mb-0">共 {{ total }} 条记录</p>
+                        <nav>
+                            <ul class="pagination mb-0">
+                                {% if page > 1 %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('readers', page=page-1, search=search, reader_type=reader_type, per_page=per_page) }}">
+                                        上一页
+                                    </a>
+                                </li>
+                                {% endif %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ page }}/{{ total_pages }}</span>
+                                </li>
+                                {% if page < total_pages %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('readers', page=page+1, search=search, reader_type=reader_type, per_page=per_page) }}">
+                                        下一页
+                                    </a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

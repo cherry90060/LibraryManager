@@ -1,0 +1,668 @@
+{% extends "base_simple.html" %}
+
+{% block title %}公告管理 - 图书馆管理系统{% endblock %}
+
+{% block styles %}
+<link href="{{ url_for('static', filename='css/announcement.css') }}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid announcement-content">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="announcement-title" style="text-align: center !important; display: block !important; width: 100% !important; margin: 0 auto 2rem !important;">
+                公告管理
+            </h1>
+        </div>
+    </div>
+
+    <!-- 筛选条件 -->
+    <div class="row mb-4">
+        <div class="col-md-2 mb-4">
+            <div class="card filter-card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-filter icon-filter-purple"></i> 筛选条件
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="GET" action="{{ url_for('announcement_management') }}">
+                        <div class="mb-3">
+                            <label class="form-label" style="color: #5C4033; font-weight: 600;">功能模块</label>
+                            <div class="select-arrow">
+                                <select class="form-select form-select-announcement" name="module" id="moduleSelect" onchange="switchModule()">
+                                    <option value="templates" {% if module == 'templates' %}selected{% endif %}>推文模板</option>
+                                    <option value="records" {% if module == 'records' %}selected{% endif %}>推送记录</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3" id="templateFilters">
+                            <label class="form-label" style="color: #5C4033; font-weight: 600;">模板名称</label>
+                            <div class="search-wrapper">
+                                <input type="text" class="form-control form-control-announcement" name="search" value="{{ search }}" placeholder="搜索模板">
+                            </div>
+                        </div>
+                        <div class="mb-3" id="recordFilters" style="display: {% if module == 'records' %}block{% else %}none{% endif %};">
+                            <label class="form-label" style="color: #5C4033; font-weight: 600;">推送状态</label>
+                            <div class="select-arrow">
+                                <select class="form-select form-select-announcement" name="status">
+                                    <option value="">全部状态</option>
+                                    <option value="success" {% if status == 'success' %}selected{% endif %}>成功</option>
+                                    <option value="failed" {% if status == 'failed' %}selected{% endif %}>失败</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3" id="dateFilters" style="display: {% if module == 'records' %}block{% else %}none{% endif %};">
+                            <label class="form-label" style="color: #5C4033; font-weight: 600;">推送时间</label>
+                            <input type="date" class="form-control form-control-announcement mb-2" name="start_date" value="{{ start_date }}" placeholder="开始日期">
+                            <input type="date" class="form-control form-control-announcement" name="end_date" value="{{ end_date }}" placeholder="结束日期">
+                        </div>
+                        <button type="submit" class="btn btn-filter w-100">
+                            <i class="bi bi-search icon-search-orange"></i> 筛选
+                        </button>
+                        <a href="{{ url_for('announcement_management') }}" class="btn btn-reset w-100 mt-2">
+                            <i class="bi bi-x-circle"></i> 重置
+                        </a>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 推文模板列表 -->
+        <div class="col-md-10" id="templatesModule" style="display: {% if module == 'templates' %}block{% else %}none{% endif %};">
+            <div class="card list-card fade-in">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-list icon-list-blue"></i> 推文模板
+                    </h5>
+                    <div>
+                        <button type="button" class="btn btn-add-template" data-bs-toggle="modal" data-bs-target="#addTemplateModal">
+                            <i class="bi bi-plus-circle icon-plus-blue"></i> 新增模板
+                        </button>
+                        <button type="button" class="btn btn-quick-push ms-2" data-bs-toggle="modal" data-bs-target="#quickPushModal">
+                            <i class="bi bi-send icon-send-blue"></i> 快捷推送
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table announcement-table">
+                            <thead>
+                                <tr>
+                                    <th>模板名称</th>
+                                    <th>推文标题</th>
+                                    <th>推送对象</th>
+                                    <th>创建时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for template in templates %}
+                                <tr>
+                                    <td>{{ template.name }}</td>
+                                    <td>{{ template.title }}</td>
+                                    <td>
+                                        <span class="badge badge-announcement {% if template.target_type == 'all' %}badge-all{% else %}badge-target{% endif %}">
+                                            {% if template.target_type == 'all' %}全部用户{% elif template.target_type == 'user' %}普通用户{% elif template.target_type == 'admin' %}管理员{% else %}{{ template.target_type }}{% endif %}
+                                        </span>
+                                    </td>
+                                    <td>{{ template.created_at[:10] }}</td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-action-edit" onclick="editTemplate({{ template.id }})">
+                                            <i class="bi bi-pencil icon-pencil-blue"></i> 编辑
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-action-push ms-1" onclick="useTemplate({{ template.id }})">
+                                            <i class="bi bi-send icon-send-blue"></i> 推送
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-action-delete ms-1" onclick="deleteTemplate({{ template.id }}, '{{ template.name }}')">
+                                            <i class="bi bi-trash icon-trash-red"></i> 删除
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="5" class="empty-data">暂无模板数据</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 推送记录列表 -->
+        <div class="col-md-10" id="recordsModule" style="display: {% if module == 'records' %}block{% else %}none{% endif %};">
+            <div class="card list-card fade-in">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-list icon-list-blue"></i> 推送记录
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table announcement-table">
+                            <thead>
+                                <tr>
+                                    <th>推送ID</th>
+                                    <th>模板名称</th>
+                                    <th>推送时间</th>
+                                    <th>推送对象</th>
+                                    <th>推送状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in records %}
+                                <tr>
+                                    <td>{{ record.id }}</td>
+                                    <td>{{ record.template_name }}</td>
+                                    <td>{{ record.push_time }}</td>
+                                    <td>
+                                        <span class="badge badge-announcement {% if record.target_type == 'all' %}badge-all{% else %}badge-target{% endif %}">
+                                            {% if record.target_type == 'all' %}全部用户{% elif record.target_type == 'user' %}普通用户{% elif record.target_type == 'admin' %}管理员{% else %}{{ record.target_type }}{% endif %}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-announcement {% if record.status == 'success' %}badge-success{% else %}badge-failed{% endif %}">
+                                            {% if record.status == 'success' %}成功{% else %}失败{% endif %}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-action-view" onclick="viewRecord({{ record.id }})">
+                                            <i class="bi bi-eye icon-eye-blue"></i> 查看详情
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="6" class="empty-data">暂无推送记录</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 新增模板模态框 -->
+<div class="modal fade" id="addTemplateModal" tabindex="-1" aria-labelledby="addTemplateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content modal-content-announcement">
+            <div class="modal-header modal-header-announcement" style="background: white !important;">
+                <h5 class="modal-title" id="addTemplateModalLabel" style="color: black !important; font-weight: 600 !important;">
+                    <i class="bi bi-plus-circle" style="color: black !important;"></i> 新增模板
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="filter: none !important;"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addTemplateForm" method="POST" action="{{ url_for('create_template') }}">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" style="color: #5C4033; font-weight: 600;">模板名称 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-announcement" name="name" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" style="color: #5C4033; font-weight: 600;">推送对象 <span class="text-danger">*</span></label>
+                            <div class="select-arrow">
+                                <select class="form-select form-select-announcement" name="target_type" required>
+                                    <option value="all">全部用户</option>
+                                    <option value="user">普通用户</option>
+                                    <option value="admin">管理员</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label" style="color: #5C4033; font-weight: 600;">推文标题 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-announcement" name="title" required>
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label" style="color: #5C4033; font-weight: 600;">推文内容 <span class="text-danger">*</span></label>
+                            <textarea class="form-control form-control-announcement" name="content" rows="8" required placeholder="支持简单富文本，如：使用 **加粗** 表示加粗文字"></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer modal-footer-announcement">
+                <button type="button" class="btn btn-reset" data-bs-dismiss="modal">取消</button>
+                <button type="submit" form="addTemplateForm" class="btn btn-add-template">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 编辑模板模态框 -->
+<div class="modal fade" id="editTemplateModal" tabindex="-1" aria-labelledby="editTemplateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content modal-content-announcement">
+            <div class="modal-header modal-header-announcement" style="background: white !important;">
+                <h5 class="modal-title" id="editTemplateModalLabel" style="color: black !important; font-weight: 600 !important;">
+                    <i class="bi bi-pencil" style="color: black !important;"></i> 编辑模板
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="filter: none !important;"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editTemplateForm" method="POST">
+                    <input type="hidden" name="id" id="edit_id">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" style="color: #5C4033; font-weight: 600;">模板名称 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-announcement" name="name" id="edit_name" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" style="color: #5C4033; font-weight: 600;">推送对象 <span class="text-danger">*</span></label>
+                            <div class="select-arrow">
+                                <select class="form-select form-select-announcement" name="target_type" id="edit_target_type" required>
+                                    <option value="all">全部用户</option>
+                                    <option value="user">普通用户</option>
+                                    <option value="admin">管理员</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label" style="color: #5C4033; font-weight: 600;">推文标题 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-announcement" name="title" id="edit_title" required>
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label" style="color: #5C4033; font-weight: 600;">推文内容 <span class="text-danger">*</span></label>
+                            <textarea class="form-control form-control-announcement" name="content" id="edit_content" rows="8" required></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer modal-footer-announcement">
+                <button type="button" class="btn btn-reset" data-bs-dismiss="modal">取消</button>
+                <button type="submit" form="editTemplateForm" style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); box-shadow: 0 4px 12px rgba(44, 62, 80, 0.3); color: white !important; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; transition: all 0.3s ease;">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 快捷推送模态框 -->
+<div class="modal fade" id="quickPushModal" tabindex="-1" aria-labelledby="quickPushModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content modal-content-announcement">
+            <div class="modal-header modal-header-announcement" style="background: white !important;">
+                <h5 class="modal-title" id="quickPushModalLabel" style="color: black !important; font-weight: 600 !important;">
+                    <i class="bi bi-send" style="color: black !important;"></i> 快捷推送
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="filter: none !important;"></button>
+            </div>
+            <div class="modal-body">
+                <form id="quickPushForm" method="POST" action="{{ url_for('quick_push') }}">
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label" style="color: #5C4033; font-weight: 600;">选择模板 <span class="text-danger">*</span></label>
+                            <div class="select-arrow">
+                                <select class="form-select form-select-announcement" name="template_id" id="push_template_id" required onchange="loadTemplateContent()">
+                                    <option value="">请选择模板</option>
+                                    {% for template in all_templates %}
+                                    <option value="{{ template.id }}">{{ template.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label" style="color: #5C4033; font-weight: 600;">推文标题 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-announcement" name="title" id="push_title" required>
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label" style="color: #5C4033; font-weight: 600;">推文内容 <span class="text-danger">*</span></label>
+                            <textarea class="form-control form-control-announcement" name="content" id="push_content" rows="8" required></textarea>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" style="color: #5C4033; font-weight: 600;">推送对象 <span class="text-danger">*</span></label>
+                            <div class="select-arrow">
+                                <select class="form-select form-select-announcement" name="target_type" id="push_target_type" required>
+                                    <option value="all">全部用户</option>
+                                    <option value="user">普通用户</option>
+                                    <option value="admin">管理员</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer modal-footer-announcement">
+                    <button type="button" class="btn btn-reset" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" form="quickPushForm" class="btn btn-quick-push">确认推送</button>
+                </div>
+        </div>
+    </div>
+</div>
+
+<!-- 查看详情模态框 -->
+<div class="modal fade" id="viewRecordModal" tabindex="-1" aria-labelledby="viewRecordModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content modal-content-announcement">
+            <div class="modal-header modal-header-announcement" style="background: white !important;">
+                <h5 class="modal-title" id="viewRecordModalLabel" style="color: black !important; font-weight: 600 !important;">
+                    <i class="bi bi-eye" style="color: black !important;"></i> 推送详情
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="filter: none !important;"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label" style="color: #5C4033; font-weight: 600;">推送ID</label>
+                        <input type="text" class="form-control form-control-announcement" id="view_id" readonly>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label" style="color: #5C4033; font-weight: 600;">推送状态</label>
+                        <input type="text" class="form-control form-control-announcement" id="view_status" readonly>
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label" style="color: #5C4033; font-weight: 600;">模板名称</label>
+                        <input type="text" class="form-control form-control-announcement" id="view_template_name" readonly>
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label" style="color: #5C4033; font-weight: 600;">推文标题</label>
+                        <input type="text" class="form-control form-control-announcement" id="view_title" readonly>
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label" style="color: #5C4033; font-weight: 600;">推文内容</label>
+                        <textarea class="form-control form-control-announcement" id="view_content" rows="6" readonly></textarea>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label" style="color: #5C4033; font-weight: 600;">推送对象</label>
+                        <input type="text" class="form-control form-control-announcement" id="view_target_type" readonly>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label" style="color: #5C4033; font-weight: 600;">推送时间</label>
+                        <input type="text" class="form-control form-control-announcement" id="view_push_time" readonly>
+                    </div>
+                    <div class="col-md-12 mb-3" id="view_error_container" style="display: none;">
+                        <label class="form-label text-danger" style="font-weight: 600;">失败原因</label>
+                        <textarea class="form-control form-control-announcement is-invalid" id="view_error" rows="3" readonly></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer modal-footer-announcement">
+                <button type="button" class="btn btn-reset" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 确认删除模态框 -->
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-lg shadow-lg">
+            <div class="modal-header rounded-t-lg" style="background: white !important;">
+                <h5 class="modal-title font-weight-600" id="confirmDeleteModalLabel" style="color: black !important; font-weight: 600 !important;">
+                    <i class="bi bi-exclamation-triangle me-2" style="color: black !important;"></i> 确认删除
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="filter: none !important;"></button>
+            </div>
+            <div class="modal-body p-5">
+                <div class="text-center">
+                    <div class="mb-4">
+                        <i class="bi bi-trash3 text-danger" style="font-size: 2.5rem;"></i>
+                    </div>
+                    <p id="deleteMessage" class="text-gray-700">
+                        确定要执行此操作吗？
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer bg-gray-50 rounded-b-lg border-t border-gray-100 justify-content-center">
+                <button type="button" class="btn btn-outline-gray px-6 py-2 rounded-lg font-weight-500 transition-all mr-3" data-bs-dismiss="modal">
+                    取消
+                </button>
+                <button type="button" class="btn btn-[#2c3e50] px-6 py-2 rounded-lg font-weight-500 transition-all" id="confirmDeleteBtn">
+                    确认删除
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function switchModule() {
+    const module = document.getElementById('moduleSelect').value;
+    if (module === 'templates') {
+        document.getElementById('templatesModule').style.display = 'block';
+        document.getElementById('recordsModule').style.display = 'none';
+        document.getElementById('templateFilters').style.display = 'block';
+        document.getElementById('recordFilters').style.display = 'none';
+        document.getElementById('dateFilters').style.display = 'none';
+    } else {
+        document.getElementById('templatesModule').style.display = 'none';
+        document.getElementById('recordsModule').style.display = 'block';
+        document.getElementById('templateFilters').style.display = 'none';
+        document.getElementById('recordFilters').style.display = 'block';
+        document.getElementById('dateFilters').style.display = 'block';
+    }
+}
+
+function editTemplate(templateId) {
+    fetch(`/api/template/${templateId}`)
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            const template = result.template;
+            document.getElementById('edit_id').value = template.id;
+            document.getElementById('edit_name').value = template.name;
+            document.getElementById('edit_title').value = template.title;
+            document.getElementById('edit_target_type').value = template.target_type;
+            document.getElementById('edit_content').value = template.content;
+            
+            const editModal = new bootstrap.Modal(document.getElementById('editTemplateModal'));
+            editModal.show();
+        } else {
+            alert('获取模板信息失败');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('获取模板信息失败');
+    });
+}
+
+document.getElementById('editTemplateForm')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const templateId = document.getElementById('edit_id').value;
+    const form = this;
+    
+    fetch(`/template/${templateId}/edit`, {
+        method: 'POST',
+        body: new FormData(form),
+        headers: {
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            alert('编辑成功');
+            location.reload();
+        } else {
+            alert('编辑失败: ' + result.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('编辑失败');
+    });
+});
+
+let currentDeleteTemplateId = null;
+
+function deleteTemplate(templateId, templateName) {
+    currentDeleteTemplateId = templateId;
+    document.getElementById('deleteMessage').textContent = `确定要删除模板「${templateName}」吗？`;
+    const confirmDeleteModal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
+    confirmDeleteModal.show();
+}
+
+// 确认删除按钮点击事件
+ document.getElementById('confirmDeleteBtn')?.addEventListener('click', function() {
+    if (currentDeleteTemplateId) {
+        fetch(`/template/${currentDeleteTemplateId}/delete`, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(result => {
+            const confirmDeleteModal = bootstrap.Modal.getInstance(document.getElementById('confirmDeleteModal'));
+            confirmDeleteModal.hide();
+            
+            if (result.success) {
+                alert('删除成功');
+                location.reload();
+            } else {
+                alert('删除失败: ' + result.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            const confirmDeleteModal = bootstrap.Modal.getInstance(document.getElementById('confirmDeleteModal'));
+            confirmDeleteModal.hide();
+            alert('删除失败');
+        });
+    }
+});
+
+// 新增模板表单提交处理
+document.getElementById('addTemplateForm')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const form = this;
+    
+    fetch('/template/create', {
+        method: 'POST',
+        body: new FormData(form),
+        headers: {
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            alert('新增成功');
+            location.reload();
+        } else {
+            alert('新增失败: ' + result.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('新增失败');
+    });
+});
+
+// 快捷推送表单提交处理
+document.getElementById('quickPushForm')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const form = this;
+    
+    fetch('/quick_push', {
+        method: 'POST',
+        body: new FormData(form),
+        headers: {
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            alert('推送已发出');
+            location.reload();
+        } else {
+            alert('推送失败: ' + result.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('推送失败');
+    });
+});
+
+function useTemplate(templateId) {
+    fetch(`/api/template/${templateId}`)
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            const template = result.template;
+            document.getElementById('push_template_id').value = template.id;
+            document.getElementById('push_title').value = template.title;
+            document.getElementById('push_content').value = template.content;
+            document.getElementById('push_target_type').value = template.target_type;
+            
+            const pushModal = new bootstrap.Modal(document.getElementById('quickPushModal'));
+            pushModal.show();
+        } else {
+            alert('获取模板信息失败');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('获取模板信息失败');
+    });
+}
+
+function loadTemplateContent() {
+    const templateId = document.getElementById('push_template_id').value;
+    if (!templateId) {
+        document.getElementById('push_title').value = '';
+        document.getElementById('push_content').value = '';
+        document.getElementById('push_target_type').value = 'all';
+        return;
+    }
+    
+    fetch(`/api/template/${templateId}`)
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            const template = result.template;
+            document.getElementById('push_title').value = template.title;
+            document.getElementById('push_content').value = template.content;
+            document.getElementById('push_target_type').value = template.target_type;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+function viewRecord(recordId) {
+    fetch(`/api/push_record/${recordId}`)
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            const record = result.record;
+            document.getElementById('view_id').value = record.id;
+            document.getElementById('view_template_name').value = record.template_name;
+            document.getElementById('view_title').value = record.title;
+            document.getElementById('view_content').value = record.content;
+            document.getElementById('view_target_type').value = record.target_type === 'all' ? '全部用户' : (record.target_type === 'user' ? '普通用户' : (record.target_type === 'admin' ? '管理员' : record.target_type));
+            document.getElementById('view_push_time').value = record.push_time;
+            
+            const statusText = record.status === 'success' ? '成功' : '失败';
+            document.getElementById('view_status').value = statusText;
+            
+            if (record.status === 'failed' && record.error_message) {
+                document.getElementById('view_error_container').style.display = 'block';
+                document.getElementById('view_error').value = record.error_message;
+            } else {
+                document.getElementById('view_error_container').style.display = 'none';
+            }
+            
+            const viewModal = new bootstrap.Modal(document.getElementById('viewRecordModal'));
+            viewModal.show();
+        } else {
+            alert('获取推送记录失败');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('获取推送记录失败');
+    });
+}
+</script>
+{% endblock %}
