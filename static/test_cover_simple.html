@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>测试封面图片</title>
+    <style>
+        .book-cover {
+            width: 120px;
+            height: 160px;
+            object-fit: cover;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <h1>测试封面图片</h1>
+    <h2>测试1：使用硬编码路径</h2>
+    <img src="/static/book_covers/308f0f7b850d31ba60eddc744b14daba.jpg" alt="Python编程：从入门到实践 封面" class="book-cover">
+    <h2>测试2：使用默认封面</h2>
+    <img src="/static/book_covers/default_cover.jpg" alt="默认封面" class="book-cover">
+    <h2>测试3：使用URL编码路径</h2>
+    <img src="http://127.0.0.1:5000/static/book_covers/308f0f7b850d31ba60eddc744b14daba.jpg" alt="Python编程：从入门到实践 封面" class="book-cover">
+</body>
+</html>

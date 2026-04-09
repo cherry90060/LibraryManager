@@ -1,0 +1,6 @@
+<svg width="400" height="600" xmlns="http://www.w3.org/2000/svg">
+  <rect width="400" height="600" fill="#f0f0f0"/>
+  <rect width="380" height="580" x="10" y="10" fill="#ffffff" stroke="#cccccc" stroke-width="2"/>
+  <text x="200" y="250" font-family="Arial" font-size="36" text-anchor="middle" fill="#999999">No Cover</text>
+  <text x="200" y="300" font-family="Arial" font-size="24" text-anchor="middle" fill="#cccccc">Book Cover</text>
+</svg>
